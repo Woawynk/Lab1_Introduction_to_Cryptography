@@ -1,9 +1,16 @@
 #ifndef PRNG_H
 #define PRNG_H
+
 #include "fips202.h"
 #include <stdlib.h>
-#include <sys/random.h>
 #include <errno.h>
+
+#if defined(_WIN32) || defined(_WIN64)
+#include <windows.h>
+#include <wincrypt.h>
+#else
+#include <sys/random.h>
+#endif
 
 typedef struct
 {
@@ -15,4 +22,5 @@ void prng_seed(prng_ctx *ctx, const uint8_t *seed, size_t seedlen);
 uint16_t prng_next_u16(prng_ctx *ctx);
 uint32_t prng_next_u32(prng_ctx *ctx);
 uint64_t prng_next_u64(prng_ctx *ctx);
-#endif
+
+#endif // PRNG_H
