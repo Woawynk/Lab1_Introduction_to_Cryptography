@@ -1,0 +1,432 @@
+\documentclass[12pt,a4paper]{article}
+
+% --- Cấu hình ngôn ngữ & Font chữ tương thích cả XeLaTeX và pdfLaTeX ---
+\usepackage{iftex}
+\ifXeTeX
+  \usepackage{fontspec}
+  \setmainfont{Times New Roman}
+\else
+  \usepackage[utf8]{inputenc}
+  \usepackage[vietnamese]{babel}
+  \usepackage[T5]{fontenc}
+  \usepackage{mathptmx}
+\fi
+
+% --- Các gói hỗ trợ định dạng & Toán học ---
+\usepackage[top=2.5cm, bottom=2.5cm, left=2.5cm, right=2cm]{geometry}
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+
+% --- Cấu hình Hyperref ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!80!black,
+    citecolor=green!60!black,
+    urlcolor=magenta!80!black,
+    pdftitle={Báo cáo Lab 01 - Số nguyên tố & Trao đổi khóa Diffie-Hellman},
+    pdfauthor={Nhóm sinh viên}
+}
+
+% --- Cấu hình hiển thị mã nguồn (Code Listing) ---
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.97,0.97,0.97}
+
+\lstdefinestyle{cppstyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{blue}\bfseries,
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2,
+    frame=single
+}
+\lstset{style=cppstyle}
+
+% --- Cấu hình Header & Footer ---
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\small Nhập môn Mã hóa Mật mã - Lab 01}
+\lhead{\small Số nguyên tố \& Trao đổi khóa Diffie-Hellman}
+\cfoot{\thepage}
+
+\begin{document}
+
+% ==================== TRANG BÌA ====================
+\begin{titlepage}
+    \centering
+    \vspace*{0.5cm}
+    {\Large \textbf{ĐẠI HỌC QUỐC GIA TP. HỒ CHÍ MINH}}\\[0.2cm]
+    {\large \textbf{TRƯỜNG ĐẠI HỌC KHOA HỌC TỰ NHIÊN}}\\[0.2cm]
+    {\large \textbf{KHOA CÔNG NGHỆ THÔNG TIN}}\\[0.2cm]
+    {\large \textbf{BỘ MÔN CÔNG NGHỆ TRI THỨC}}\\[1.5cm]
+
+    \includegraphics[width=0.25\textwidth]{example-image-a}\\[1.5cm]
+
+    {\LARGE \textbf{BÁO CÁO BÀI TẬP LỚN 01}}\\[0.5cm]
+    {\Huge \textbf{SỐ NGUYÊN TỐ \& TRAO ĐỔI KHÓA DIFFIE-HELLMAN}}\\[1.5cm]
+
+    \textbf{Môn học:} Nhập môn Mã hóa Mật mã\\[0.3cm]
+    \textbf{Giảng viên hướng dẫn:} ThS. Trần Trung Điền\\[1.5cm]
+
+    \begin{flushleft}
+    \textbf{Sinh viên thực hiện:}\\[0.2cm]
+    \begin{tabular}{llr}
+        1. [Họ và tên SV 1] & - MSSV: [MSSV 1] & (Nhóm trưởng)\\
+        2. [Họ và tên SV 2] & - MSSV: [MSSV 2] & (Thành viên)\\
+    \end{tabular}
+    \end{flushleft}
+
+    \vfill
+    {\large TP. Hồ Chí Minh, Tháng 11/2026}
+\end{titlepage}
+
+% ==================== MỤC LỤC ====================
+\tableofcontents
+\newpage
+
+% ==================== NỘI DUNG CHÍNH ====================
+
+\section{Hệ thống xử lý số lớn (Big Number System)}
+
+\subsection{Đặt vấn đề và Thiết kế cấu trúc \texttt{uint512\_t}}
+Trong mật mã học hiện đại, các giao thức khóa công khai như trao đổi khóa Diffie-Hellman (DHKE) hay mã hóa RSA đòi hỏi việc tính toán trên các số nguyên có độ dài hàng trăm đến hàng nghìn bit (tối thiểu 512 bit, thông dụng 2048 bit). Tuy nhiên, các kiểu dữ liệu nguyên thủy của ngôn ngữ C/C++ tiêu chuẩn chỉ giới hạn ở mức 64 bit (\texttt{uint64\_t}). Nhóm đã xây dựng cấu trúc số nguyên lớn không dấu 512-bit \texttt{uint512\_t} hoàn toàn tự cài đặt từ đầu, không phụ thuộc vào các thư viện bên ngoài như GMP hay NTL.
+
+Cấu trúc được biểu diễn bằng một mảng gồm 8 phần tử 64-bit:
+\begin{lstlisting}[language=C++]
+struct uint512_t {
+    uint64_t digits[8]; // 8 * 64 bit = 512 bit
+    ...
+};
+\end{lstlisting}
+
+\subsubsection{Mô hình tổ chức bộ nhớ (Endianness)}
+Cấu trúc sử dụng mô hình \textbf{Little-endian} ở cấp độ mảng từ 64-bit:
+\begin{itemize}
+    \item \texttt{digits[0]}: Lưu trữ 64 bit có trọng số thấp nhất (Least Significant Word - LSW).
+    \item \texttt{digits[7]}: Lưu trữ 64 bit có trọng số cao nhất (Most Significant Word - MSW).
+\end{itemize}
+Giá trị toán học thực tế của số nguyên $A \in \text{\texttt{uint512\_t}}$ được xác định theo hệ cơ số $2^{64}$:
+\begin{equation}
+A = \sum_{i=0}^{7} \text{\texttt{digits}}[i] \cdot (2^{64})^i
+\end{equation}
+
+\subsection{Các toán tử số học và thao tác bit cơ bản}
+
+\subsubsection{Toán tử so sánh (\texttt{==}, \texttt{!=}, \texttt{<}, \texttt{>}, \texttt{<=}, \texttt{>=})}
+Để so sánh hai số nguyên $A$ và $B$, giải thuật duyệt từ từ có trọng số cao nhất (\texttt{digits[7]}) lùi dần về từ có trọng số thấp nhất (\texttt{digits[0]}):
+\begin{itemize}
+    \item Nếu $\text{\texttt{digits}}[i] \neq B\text{\texttt{.digits}}[i]$, kết quả so sánh tại từ này quyết định quan hệ giữa $A$ và $B$.
+    \item Nếu duyệt hết cả 8 từ mà tất cả các cặp đều bằng nhau thì $A = B$.
+\end{itemize}
+
+\subsubsection{Toán tử cộng đa độ chính xác (\texttt{+})}
+Phép cộng được hiện thực bằng cách cộng từng cặp từ 64-bit từ $i = 0 \to 7$ kèm theo biến nhớ (\textit{carry}):
+\begin{lstlisting}[language=C++]
+uint512_t operator+(const uint512_t &a, const uint512_t &b) {
+    uint512_t res;
+    uint64_t carry = 0;
+    for (size_t i = 0; i < 8; i++) {
+        uint64_t u1 = a.digits[i];
+        uint64_t u2 = b.digits[i];
+        uint64_t sum = u1 + u2 + carry;
+        carry = (sum < u1) || (carry && (sum == u1));
+        res.digits[i] = sum;
+    }
+    return res;
+}
+\end{lstlisting}
+
+\subsubsection{Toán tử trừ đa độ chính xác (\texttt{-})}
+Phép trừ được thực hiện tương tự phép cộng nhưng đi kèm biến mượn (\textit{borrow}):
+\begin{lstlisting}[language=C++]
+uint512_t operator-(const uint512_t &a, const uint512_t &b) {
+    uint512_t res;
+    uint64_t borrow = 0;
+    for (size_t i = 0; i < 8; i++) {
+        uint64_t u1 = a.digits[i];
+        uint64_t u2 = b.digits[i];
+        uint64_t diff = u1 - u2 - borrow;
+        borrow = (u1 < u2) || (borrow && (u1 == u2));
+        res.digits[i] = diff;
+    }
+    return res;
+}
+\end{lstlisting}
+
+\subsubsection{Phép dịch bit (\texttt{<<}, \texttt{>>}) và hàm dịch 1 bit tối ưu}
+Bên cạnh toán tử dịch nhiều bit tổng quát, nhóm đặc biệt tối ưu hàm \texttt{shift\_left\_1(uint64\_t carry\_in)}:
+Dịch toàn bộ mảng 512 bit sang trái 1 vị trí, đưa bit \texttt{carry\_in} vào vị trí bit 0 và trả về bit thứ 512 bị đẩy ra ngoài. Hàm này giữ vai trò then chốt trong giải thuật chia lấy dư và nhân mô-đun.
+
+\subsection{Các giải thuật số học mô-đun an toàn không tràn số}
+Yêu cầu bắt buộc của bài tập là: \textbf{Mọi biến trung gian phải luôn nằm trong phạm vi 512 bit}, không được tạo ra số 1024-bit khi nhân. Nhóm đã hiện thực chính xác theo tài liệu mã giả \textit{pseudocode-modular-operation.pdf}.
+
+\subsubsection{Phép chia lấy dư \texttt{mod(x, y)}}
+Thuật toán chia nhị phân dịch bit (Binary Long Division) áp dụng quy tắc Horner duyệt từ bit cao nhất của $x$ xuống bit 0:
+\begin{itemize}
+    \item Khởi tạo $\text{rem} = 0$.
+    \item Với mỗi bit $x_i$ ($i$ giảm dần):
+    \begin{align*}
+        \text{rem} &= (\text{rem} \ll 1) + x_i\\
+        \text{Nếu } \text{rem} \ge y &\implies \text{rem} = \text{rem} - y
+    \end{align*}
+    \item \textbf{Cơ chế chống tràn số:} Do trước mỗi bước ta luôn duy trì $\text{rem} < y$, nên sau khi dịch trái và cộng $x_i \in \{0, 1\}$, giá trị mới không vượt quá $2(y - 1) + 1 = 2y - 1$. Sau khi trừ $y$, phần dư quay về khoảng $[0, y - 1]$, đảm bảo không bao giờ tràn 512 bit.
+\end{itemize}
+
+\subsubsection{Phép cộng mô-đun \texttt{AddMod(x, y, p)}}
+Tính $(x + y) \pmod p$ với điều kiện $x, y < p$:
+\begin{equation}
+\text{AddMod}(x, y, p) = 
+\begin{cases}
+x - (p - y), & \text{nếu } x \ge p - y \\
+x + y, & \text{ngược lại}
+\end{cases}
+\end{equation}
+Do $y < p$ nên $p - y > 0$ (không bị âm). Nếu $x \ge p - y$ thì $x - (p - y) \ge 0$ (phép trừ hoàn toàn hợp lệ) và bằng đúng $(x + y) - p$.
+
+\subsubsection{Phép nhân mô-đun \texttt{MultMod(x, y, p)}}
+Thuật toán \textbf{Double-and-Add} tính $(x \cdot y) \pmod p$:
+Biểu diễn $y = \sum_{i=0}^{n-1} y_i \cdot 2^i$ với $y_i \in \{0, 1\}$. Khi đó:
+\begin{equation}
+x \cdot y \pmod p = \sum_{i=0}^{n-1} y_i \cdot (x \cdot 2^i \pmod p) \pmod p
+\end{equation}
+Thuật toán duyệt $i$ từ $0 \to n-1$:
+\begin{itemize}
+    \item Nếu $y_i == 1$: $\text{ret} = \text{AddMod}(\text{ret}, x, p)$.
+    \item Cập nhật lũy kế: $x = \text{AddMod}(x, x, p)$ (tương đương nhân đôi $2x \pmod p$).
+\end{itemize}
+Toàn bộ giải thuật chỉ gọi \texttt{AddMod}, nên mọi giá trị trung gian đều $< p < 2^{512}$.
+
+\subsubsection{Phép lũy thừa mô-đun \texttt{modular\_exponentiation(base, exp, p)}}
+Thuật toán \textbf{Square-and-Multiply} tính $(\text{base}^{\text{exp}}) \pmod p$:
+Biểu diễn số mũ $\text{exp} = \sum_{i=0}^{n-1} e_i \cdot 2^i$. Khi đó:
+\begin{equation}
+\text{base}^{\text{exp}} \pmod p = \prod_{i=0}^{n-1} (\text{base}^{2^i})^{e_i} \pmod p
+\end{equation}
+Thuật toán duyệt $i$ từ $0 \to n-1$:
+\begin{itemize}
+    \item Nếu $e_i == 1$: $\text{ret} = \text{MultMod}(\text{ret}, \text{cur\_base}, p)$.
+    \item Cập nhật bình phương: $\text{cur\_base} = \text{MultMod}(\text{cur\_base}, \text{cur\_base}, p)$.
+\end{itemize}
+
+\newpage
+\section{Hàm kiểm tra số nguyên tố (Primality Testing)}
+
+\subsection{Cơ sở lý thuyết}
+Trong các giao thức mật mã, việc sinh khóa đòi hỏi các số nguyên tố rất lớn. Thuật toán kiểm tra số nguyên tố xác định (deterministic) như phép thử chia thông thường có độ phức tạp $O(\sqrt{n})$, không khả thi đối với số 512-bit (khoảng $2^{256}$ phép tính). Do đó, các thuật toán kiểm tra xác suất đa thức (Probabilistic Primality Tests) là lựa chọn duy nhất.
+
+\subsection{Định lý Fermat nhỏ và Hạn chế}
+Định lý Fermat nhỏ phát biểu rằng: Nếu $p$ là số nguyên tố và $\gcd(a, p) = 1$, thì:
+\begin{equation}
+a^{p-1} \equiv 1 \pmod p
+\end{equation}
+Tuy nhiên, nếu một số $n$ thỏa mãn $a^{n-1} \equiv 1 \pmod n$ với một cơ sở $a$, $n$ chưa chắc là số nguyên tố mà có thể là một số giả nguyên tố Fermat (Fermat Pseudoprime). Nguy hiểm hơn, tồn tại các số \textbf{Carmichael} (ví dụ $561, 1105, \dots$) là hợp số nhưng thỏa mãn đẳng thức Fermat với mọi cơ sở $a$ nguyên tố cùng nhau với nó, khiến phép thử Fermat hoàn toàn thất bại.
+
+\subsection{Thuật toán Miller-Rabin}
+Thuật toán Miller-Rabin khắc phục triệt để nhược điểm của Fermat bằng cách khai thác tính chất căn bậc hai của đơn vị trong trường hữu hạn: Nếu $p$ là số nguyên tố, phương trình $x^2 \equiv 1 \pmod p$ chỉ có đúng hai nghiệm là $x \equiv 1$ hoặc $x \equiv -1 \pmod p$.
+
+\subsubsection{Các bước thực hiện}
+Cho số lẻ $n > 2$ cần kiểm tra:
+\begin{enumerate}
+    \item Phân tích $n - 1 = 2^s \cdot d$, với $d$ là số lẻ và $s \ge 1$.
+    \item Chọn ngẫu nhiên một cơ sở $a \in [2, n - 2]$.
+    \item Tính $x = a^d \pmod n$ bằng hàm \texttt{modular\_exponentiation}.
+    \item Nếu $x \equiv 1$ hoặc $x \equiv n - 1$, $n$ vượt qua vòng thử với cơ sở $a$.
+    \item Lặp lại $s - 1$ lần:
+    \begin{itemize}
+        \item $x = x^2 \pmod n$.
+        \item Nếu $x \equiv n - 1$, $n$ vượt qua vòng thử.
+        \item Nếu $x \equiv 1$, $n$ chắc chắn là hợp số.
+    \end{itemize}
+    \item Nếu duyệt hết $s - 1$ lần mà không gặp $n - 1$, $n$ chắc chắn là hợp số.
+\end{enumerate}
+
+\subsubsection{Đánh giá xác suất sai số}
+Đối với mỗi vòng thử cơ sở $a$ ngẫu nhiên, nếu $n$ là hợp số, xác suất để $n$ vượt qua phép thử (gọi là nhân chứng dối - False Witness) không vượt quá $1/4$.
+Khi thực hiện $k$ vòng thử độc lập, xác suất một hợp số bị coi nhầm là số nguyên tố là:
+\begin{equation}
+P(\text{Lỗi}) \le \left(\frac{1}{4}\right)^k = 2^{-2k}
+\end{equation}
+Trong bài tập, chương trình thiết lập $k = 40$, khi đó xác suất lỗi nhỏ hơn $2^{-80} \approx 8.27 \times 10^{-25}$, tiệm cận mức an toàn tuyệt đối trong mật mã học.
+
+\subsection{Kỹ thuật Sàng chia thử (Trial Division) tăng tốc}
+Phép tính lũy thừa mô-đun trong Miller-Rabin trên số 512-bit khá tốn kém. Do đó, nhóm áp dụng kỹ thuật \textbf{chia thử sơ bộ với 100 số nguyên tố nhỏ đầu tiên} ($2, 3, 5, 7, 11, \dots, 541$). Nếu số ngẫu nhiên sinh ra chia hết cho bất kỳ số nào trong danh sách này, nó bị loại ngay lập tức mà không cần gọi Miller-Rabin. Kỹ thuật này loại bỏ hơn $88\%$ các hợp số ngẫu nhiên tức thì, giúp tăng tốc độ sinh số nguyên tố lên hàng chục lần.
+
+\newpage
+\section{Số ngẫu nhiên trong Mật mã học (Mục điểm cộng)}
+
+\subsection{Tầm quan trọng của tính ngẫu nhiên}
+Trong an toàn thông tin, tính ngẫu nhiên là nền tảng sống còn của mọi hệ thống mật mã. Các thành phần nhạy cảm như: khóa bí mật Diffie-Hellman, khóa đối xứng AES, vector khởi tạo (IV), hay số nonce trong chữ ký số... đều bắt buộc phải là số ngẫu nhiên không thể đoán trước. 
+
+Nếu bộ sinh số ngẫu nhiên bị lỗi hoặc có thể đoán trước (predictable), kẻ tấn công dù không phá vỡ được thuật toán mã hóa vẫn có thể đoán được khóa riêng và giải mã toàn bộ dữ liệu. Một ví dụ lịch sử kinh điển là lỗ hổng trong bản phân phối Debian OpenSSL (2008), khi một lập trình viên vô tình loại bỏ nguồn entropy của bộ sinh ngẫu nhiên, khiến không gian khóa bị thu hẹp chỉ còn $32,768$ khả năng, cho phép tin tặc bẻ khóa hàng triệu chứng chỉ SSL và SSH trong vài giây.
+
+\subsection{Phân loại các bộ sinh số ngẫu nhiên}
+\begin{itemize}
+    \item \textbf{TRNG (True Random Number Generator):} Thu thập entropy từ các hiện tượng vật lý khó đoán định trong thế giới thực (tiếng ồn nhiệt của bóng bán dẫn, biến thiên thời gian xung nhịp, phân rã phóng xạ). TRNG có tốc độ sinh chậm và đòi hỏi phần cứng chuyên dụng.
+    \item \textbf{PRNG (Pseudo-Random Number Generator):} Sử dụng các công thức toán học xác định (ví dụ LCG, Mersenne Twister \texttt{std::mt19937}). Mặc dù có phân phối thống kê đều, PRNG thông thường \textbf{hoàn toàn không an toàn trong mật mã} vì khi biết một vài giá trị đầu ra, kẻ tấn công có thể khôi phục trạng thái nội bộ để dự đoán toàn bộ các số tiếp theo.
+    \item \textbf{CSPRNG (Cryptographically Secure PRNG):} Bộ sinh giả ngẫu nhiên chuẩn mật mã. CSPRNG thỏa mãn tính chất \textit{Next-bit Unpredictability} (không thể dự đoán bit tiếp theo với xác suất $> 1/2$) và \textit{State Compromise Extension} (nếu trạng thái nội bộ bị lộ, cũng không thể khôi phục các số đã sinh trong quá khứ).
+\end{itemize}
+
+\subsection{Cấu trúc bọt biển (Sponge Construction) và SHAKE-128}
+Bài tập sử dụng hàm băm tiêu chuẩn FIPS 202 Keccak ở chế độ hàm mở rộng ngõ ra (\textbf{XOF - Extendable-Output Function}) là **SHAKE-128**.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.7\textwidth]{example-image-b}
+    \caption{Mô hình cấu trúc bọt biển (Sponge Construction) của Keccak/SHAKE-128}
+\end{figure}
+
+Cấu trúc gồm hai giai đoạn chính trên một trạng thái nội bộ 1600-bit:
+\begin{enumerate}
+    \item \textbf{Giai đoạn Hấp thụ (Absorbing Phase):} Nguồn entropy đầu vào (Seed) được chia thành các khối có độ dài $r$ bit (rate) và thực hiện phép XOR với trạng thái nội bộ, sau đó biến đổi qua hoán vị $f$.
+    \item \textbf{Giai đoạn Vắt (Squeezing Phase):} Các khối dữ liệu ngẫu nhiên được trích xuất liên tục từ $r$ bit đầu tiên của trạng thái nội bộ để cung cấp dòng byte ngẫu nhiên vô hạn theo yêu cầu của ứng dụng.
+\end{enumerate}
+Trong bài làm, hàm \texttt{prng\_next\_u512} trích xuất 64 byte (512 bit) từ bộ vắt SHAKE-128 để khởi tạo số ngẫu nhiên cho việc tìm kiếm số nguyên tố và tạo khóa riêng.
+
+\newpage
+\section{Trao đổi khóa Diffie-Hellman (DHKE)}
+
+\subsection{Cơ sở toán học và Giao thức}
+Giao thức trao đổi khóa Diffie-Hellman (1976) cho phép hai bên Alice và Bob cùng thiết lập một khóa bí mật chung qua một kênh truyền thông công khai mà kẻ nghe lén (Eve) không thể tính toán được.
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{@{}ccc@{}}
+\toprule
+\textbf{Alice} & \textbf{Kênh truyền công khai} & \textbf{Bob} \\ \midrule
+\multicolumn{3}{c}{\textit{Thiết lập tham số công khai: Số nguyên tố an toàn $p$, phần tử sinh $g$}} \\ \addlinespace
+Chọn khóa riêng $a \in [2, p - 2]$ & & Chọn khóa riêng $b \in [2, p - 2]$ \\
+Tính khóa công khai: $A = g^a \pmod p$ & $\xrightarrow{\quad A \quad}$ & \\
+& $\xleftarrow{\quad B \quad}$ & Tính khóa công khai: $B = g^b \pmod p$ \\ \addlinespace
+Tính bí mật: $s_A = B^a \pmod p$ & & Tính bí mật: $s_B = A^b \pmod p$ \\ \bottomrule
+\end{tabular}
+\caption{Quy trình trao đổi khóa Diffie-Hellman}
+\end{table}
+
+Tính đúng đắn của giao thức dựa trên tính kết hợp của lũy thừa:
+\begin{equation}
+s_A \equiv (g^b)^a \equiv g^{ab} \equiv (g^a)^b \equiv s_B \pmod p
+\end{equation}
+
+\subsection{Bài toán Logarit rời rạc (DLP) và Safe Prime}
+Độ an toàn của giao thức dựa trên độ khó của **Bài toán Logarit rời rạc (Discrete Logarithm Problem - DLP)**: Khi biết $g, p$ và $A = g^a \pmod p$, việc tìm lại $a$ trên nhóm cyclic $\mathbb{Z}_p^*$ là bất khả thi về mặt tính toán với $p$ đủ lớn.
+
+\subsubsection{Tầm quan trọng của Số nguyên tố an toàn (Safe Prime)}
+Nếu $p - 1$ chỉ chứa các ước số nguyên tố nhỏ (gọi là số trơn - Smooth number), thuật toán **Pohlig-Hellman** có thể giải bài toán DLP trong thời gian rất nhanh bằng cách giải DLP trên từng nhóm con nhỏ rồi ghép lại qua Định lý phần dư Trung Hoa (CRT).
+
+Để ngăn chặn triệt để cuộc tấn công này, $p$ bắt buộc phải là một **Số nguyên tố an toàn (Safe Prime)**, có dạng:
+\begin{equation}
+p = 2q + 1
+\end{equation}
+trong đó $q$ cũng là một số nguyên tố (được gọi là số nguyên tố Sophie Germain). Khi đó, nhóm con lớn nhất của $\mathbb{Z}_p^*$ có cấp là số nguyên tố lớn $q$, triệt tiêu hoàn toàn khả năng khai thác của thuật toán Pohlig-Hellman và các cuộc tấn công nhóm con nhỏ (Small Subgroup Attacks).
+
+\subsection{Ứng dụng thực tế của Diffie-Hellman}
+\begin{enumerate}
+    \item \textbf{Giao thức TLS/HTTPS (Phiên bản TLS 1.3):}
+    Trong duyệt web an toàn (HTTPS), TLS 1.3 đã loại bỏ hoàn toàn cơ chế trao đổi khóa bằng RSA và bắt buộc sử dụng Ephemeral Diffie-Hellman (DHE / ECDHE). Mỗi phiên kết nối sử dụng một cặp khóa riêng $(a, b)$ tạm thời dùng một lần. Cơ chế này đem lại tính chất **Bảo mật chuyển tiếp hoàn hảo (Perfect Forward Secrecy - PFS)**: Ngay cả khi khóa riêng dài hạn của máy chủ bị tin tặc đánh cắp trong tương lai, tin tặc cũng không thể giải mã các phiên giao dịch HTTPS đã ghi lại trong quá khứ.
+    \item \textbf{Giao thức SSH (Secure Shell):}
+    Dùng để quản trị máy chủ từ xa an toàn qua cơ chế \texttt{diffie-hellman-group-exchange-sha256}, thiết lập khóa mã hóa đối xứng AES cho phiên dòng lệnh.
+\end{enumerate}
+
+\newpage
+\section{Mô tả chương trình đã cài đặt}
+
+\subsection{Cấu trúc thư mục mã nguồn}
+\begin{verbatim}
+project_01_source/
+|-- u512.h / u512.cpp            # Cấu trúc số lớn 512-bit và các toán tử cơ bản
+|-- modular_math.h / .cpp        # mod, AddMod, MultMod, modular_exponentiation
+|-- dh.h / dh.cpp                # Miller-Rabin, sinh Safe Prime, sinh khóa riêng
+|-- main.cpp                     # Chương trình chính mô phỏng luồng Diffie-Hellman
+|-- test_member1.cpp            # Bộ kiểm thử đơn vị cho tầng số học số lớn
+|-- Makefile                     # Tự động hóa biên dịch với g++
+`-- lib/fips202/                # Bộ sinh giả ngẫu nhiên mật mã SHAKE-128
+\end{verbatim}
+
+\subsection{Hướng dẫn biên dịch và thực thi}
+Chương trình tuân thủ chuẩn **C++14**, có thể biên dịch trực tiếp trên Linux (Ubuntu) hoặc Windows (thông qua môi trường \texttt{w64devkit} / MinGW).
+
+\begin{lstlisting}[language=bash]
+# Di chuyển vào thư mục mã nguồn
+cd project_01_source
+
+# 1. Biên dịch và chạy bộ kiểm thử đơn vị của Thành viên 1:
+make run_test
+
+# 2. Biên dịch và chạy toàn bộ chương trình Diffie-Hellman:
+make run
+\end{lstlisting}
+
+\subsection{Điều chỉnh tham số}
+Trong file \texttt{main.cpp}, người dùng có thể tùy biến các tham số:
+\begin{itemize}
+    \item \texttt{bit\_size}: Kích thước bit của số nguyên tố an toàn (mặc định $512$ bit).
+    \item \texttt{g}: Phần tử sinh công khai (chọn $g = 2$ sinh nhóm con thích hợp).
+    \item \texttt{iterations}: Số vòng lặp kiểm tra Miller-Rabin (mặc định $40$ vòng).
+\end{itemize}
+
+\subsection{Kết quả kiểm thử thực tế}
+Chương trình đã được kiểm thử nghiệm thu thành công:
+\begin{enumerate}
+    \item Bộ kiểm thử \texttt{test\_member1} vượt qua 100\% các phép toán cơ bản, phép toán mô-đun và Định lý Fermat nhỏ.
+    \item Chương trình chính thực hiện sinh thành công số nguyên tố an toàn $p$ kích thước 512-bit, sinh khóa riêng cho Alice và Bob, và tính ra bí mật chung $s_A == s_B$ trùng khớp tuyệt đối.
+\end{enumerate}
+
+\newpage
+\section{Tự đánh giá và Hướng phát triển}
+
+\subsection{Ưu điểm của chương trình}
+\begin{itemize}
+    \item \textbf{Độc lập và tuân thủ quy chuẩn:} Chương trình tự hiện thực 100\% từ cấu trúc số lớn đến các giải thuật mật mã, không dùng thư viện bên ngoài, tương thích chuẩn C++14.
+    \item \textbf{An toàn tuyệt đối về bộ nhớ:} Giải thuật \texttt{AddMod} và \texttt{MultMod} đảm bảo tất cả các biến trung gian luôn $< p < 2^{512}$, hoàn toàn loại trừ nguy cơ tràn số (overflow).
+    \item \textbf{Khả năng chạy đa nền tảng:} Mã nguồn hỗ trợ chạy mượt mà trên cả Linux và Windows (hỗ trợ cả kiến trúc 32-bit và 64-bit).
+    \item \textbf{Tối ưu tốc độ sinh số nguyên tố:} Áp dụng sàng chia thử 100 số nguyên tố nhỏ trước khi gọi Miller-Rabin giúp loại bỏ $> 88\%$ hợp số ngay lập tức.
+\end{itemize}
+
+\subsection{Hạn chế}
+\begin{itemize}
+    \item \textbf{Độ phức tạp thuật toán nhân mô-đun:} Giải thuật Double-and-Add có độ phức tạp $O(n^2)$. Khi thực hiện lũy thừa 512-bit, cần thực hiện hàng trăm phép nhân, khiến thời gian sinh số nguyên tố an toàn mất khoảng vài giây đến vài chục giây tùy thuộc vào hạt giống ngẫu nhiên.
+    \item \textbf{Xử lý đơn luồng:} Quá trình tìm kiếm số nguyên tố Sophie Germain hiện tại chỉ chạy trên 1 luồng CPU (Single-thread).
+\end{itemize}
+
+\subsection{Hướng cải tiến trong tương lai}
+\begin{enumerate}
+    \item \textbf{Thuật toán nhân Montgomery (Montgomery Multiplication):} Chuyển đổi các số về dạng Montgomery để thay thế phép chia lấy dư bằng các phép dịch bit và trừ đơn giản, giúp tăng tốc độ phép nhân mô-đun lên từ 3 đến 5 lần.
+    \item \textbf{Nhân nhanh Karatsuba:} Áp dụng thuật toán chia để trị Karatsuba với độ phức tạp $O(n^{\log_2 3}) \approx O(n^{1.58})$ cho các phép nhân số lớn.
+    \item \textbf{Song song hóa (Multi-threading):} Tận dụng thư viện \texttt{<thread>} hoặc OpenMP để phân chia việc kiểm tra các ứng viên số nguyên tố trên nhiều nhân CPU cùng lúc.
+\end{enumerate}
+
+% ==================== TÀI LIỆU THAM KHẢO ====================
+\newpage
+\begin{thebibliography}{99}
+\bibitem{diffie1976}
+W. Diffie and M. Hellman, ``New Directions in Cryptography,'' \textit{IEEE Transactions on Information Theory}, vol. 22, no. 6, pp. 644--654, 1976.
+
+\bibitem{menezes1996}
+A. J. Menezes, P. C. van Oorschot, and S. A. Vanstone, \textit{Handbook of Applied Cryptography}, CRC Press, 1996.
+
+\bibitem{nist2015}
+National Institute of Standards and Technology (NIST), ``FIPS PUB 202: SHA-3 Standard: Permutation-Based Hash and Extendable-Output Functions,'' 2015.
+
+\bibitem{galbraith}
+S. D. Galbraith, \textit{Mathematics of Public Key Cryptography}, Cambridge University Press, 2012.
+\end{thebibliography}
+
+\end{document}

@@ -1,6 +1,60 @@
-*.exe
-*.out
+# ==========================================
+# File đề bài & tài liệu tham khảo của trường
+# ==========================================
+Lab01.pdf
+pseudocode-modular-operation.pdf
+prng_sample.zip
+prng_sample/
+
+# ==========================================
+# File kế hoạch, ngữ cảnh & bản thảo nháp
+# ==========================================
+plan.md
+CONTEXT.md
+draft_report_member1.md
+
+# ==========================================
+# Biên dịch C/C++ và file nhị phân (Binary)
+# ==========================================
 *.o
 *.obj
+*.exe
+*.out
+*.app
+bin/
+build/
+bin/build/
+
+# ==========================================
+# File rác sinh ra khi biên dịch LaTeX
+# ==========================================
+*.aux
+*.log
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.bbl
+*.blg
+*.out.bak
+
+# ==========================================
+# IDE & Hệ điều hành
+# ==========================================
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# ==========================================
+# File nén & công cụ ngoài
+# ==========================================
 *.zip
+*.7z
+*.tar.gz
+*.rar
+w64devkit/
