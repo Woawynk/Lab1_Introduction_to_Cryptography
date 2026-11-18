@@ -102,13 +102,13 @@ void test_modular_exponentiation() {
 
 int main() {
     std::cout << "========================================\n";
-    std::cout << "  KIEM THU CAC MO-DUN CUA THANH VIEN 1  \n";
+    std::cout << "  KIEM THU CAC MO-DUN U512 & MODULAR     \n";
     std::cout << "========================================\n";
 
     test_basic_arithmetic();
     test_modular_operations();
     test_modular_exponentiation();
 
-    std::cout << "\n>>> TAT CA CAC TEST CUA THANH VIEN 1 DA VUOT QUA THANH CONG! <<<\n";
+    std::cout << "\n>>> TAT CA CAC TEST DA VUOT QUA THANH CONG! <<<\n";
     return 0;
 }

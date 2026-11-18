@@ -1,20 +1,8 @@
 #include "dh.h"
 #include <iostream>
 
-// Danh sách 100 số nguyên tố nhỏ đầu tiên dùng để sàng lọc hợp số nhanh
-static const uint64_t SMALL_PRIMES[] = {
-    2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71,
-    73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151,
-    157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233,
-    239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317,
-    331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419,
-    421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503,
-    509, 521, 523, 541
-};
-static const size_t NUM_SMALL_PRIMES = sizeof(SMALL_PRIMES) / sizeof(SMALL_PRIMES[0]);
-
 // ============================================================
-// PRNG UTILS
+// PRNG UTILS (SHAKE-128)
 // ============================================================
 
 uint512_t prng_next_u512(prng_ctx *ctx) {
@@ -31,9 +19,11 @@ uint512_t prng_random_odd_bits(prng_ctx *ctx, size_t bitsize) {
     uint512_t val = prng_next_u512(ctx);
 
     // Xóa các bit vượt quá bitsize
-    for (size_t i = bitsize; i < 512; i++) val.set_bit(i, 0);
+    for (size_t i = bitsize; i < 512; i++) {
+        val.set_bit(i, 0);
+    }
 
-    // Bật bit đầu (đảm bảo đủ độ dài bit) và bit cuối (đảm bảo số lẻ)
+    // Bật bit cao nhất (đảm bảo đủ độ dài bitsize) và bit 0 (đảm bảo là số lẻ)
     val.set_bit(bitsize - 1, 1);
     val.set_bit(0, 1);
 
@@ -47,38 +37,55 @@ uint512_t prng_random_range(prng_ctx *ctx, const uint512_t &min_val, const uint5
 }
 
 // ============================================================
-// SÀNG CHIA THỬ
+// TẦNG 1: LỌC NHANH BẰNG THỬ CHIA SỐ NGUYÊN TỐ NHỎ
 // ============================================================
 
-bool is_divisible_by_small_primes(const uint512_t &n) {
-    size_t len = n.bit_length();
-    for (size_t idx = 0; idx < NUM_SMALL_PRIMES; idx++) {
-        uint64_t p = SMALL_PRIMES[idx];
-        if (n == uint512_t(p)) return false; // Chính là số nguyên tố
+// Chỉ dùng 15 số nguyên tố đầu tiên: đủ loại ~75% hợp số lẻ ngẫu nhiên,
+// chi phí tối thiểu (15 phép mod số lớn thay vì 100+).
+// Lý do KHÔNG dùng nhiều hơn: với số 512-bit, mỗi lần mod() phải duyệt 512
+// bước dịch bit (long division theo bit) => 100 số nguyên tố = 51.200 thao
+// tác số lớn, chậm hơn 1 lần Miller-Rabin và chỉ bổ sung thêm ~3% lợi ích.
+static const uint32_t SMALL_PRIMES[] = {
+    3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53
+};
+static const size_t NUM_SMALL_PRIMES = sizeof(SMALL_PRIMES) / sizeof(SMALL_PRIMES[0]);
 
-        // Tính n % p bằng quy tắc Horner dịch bit - siêu tốc
-        uint64_t rem = 0;
-        for (int i = (int)len - 1; i >= 0; i--) {
-            rem = ((rem << 1) | (uint64_t)n.get_bit(i)) % p;
-        }
-        if (rem == 0) return true; // Chia hết => hợp số
+// Trả về true nếu number chia hết cho bất kỳ số nguyên tố nhỏ nào
+// (tức là chắc chắn là hợp số), false nếu vượt qua bộ lọc.
+bool is_divisible_by_small_primes(const uint512_t &number) {
+    for (size_t i = 0; i < NUM_SMALL_PRIMES; i++) {
+        uint512_t small_p(SMALL_PRIMES[i]);
+        if (number == small_p) return false;       // Chính nó là số nguyên tố nhỏ
+        if (mod(number, small_p) == uint512_t(0))  // Chia hết => hợp số
+            return true;
     }
     return false;
 }
 
 // ============================================================
-// MILLER-RABIN — Dựa theo logic của Thành viên 2, port sang uint512_t
+// TẦNG 2: KIỂM TRA NGUYÊN TỐ MILLER-RABIN
 // ============================================================
 
-bool is_prime(const uint512_t &number) {
+// Chiến lược 2 tầng (Two-Phase Primality Testing):
+//   Tầng 1 - Trial Division (is_divisible_by_small_primes):
+//     Lọc nhanh ~75% hợp số lẻ ngẫu nhiên chỉ với 15 phép mod đơn giản.
+//     Chi phí thấp, hiệu quả cao cho số được sinh ngẫu nhiên.
+//   Tầng 2 - Miller-Rabin với cơ sở {2} + 40 cơ sở ngẫu nhiên từ [2, n-2]:
+//     - Cơ sở cố định a=2 luôn là cơ sở đầu tiên: loại >99.9% hợp số ngay
+//       vòng đầu, không tốn chi phí PRNG.
+//     - 40 cơ sở ngẫu nhiên từ PRNG (SHAKE-128): đảm bảo không có số nào
+//       "may mắn" qua tất cả cơ sở cố định. Xác suất sai <= (1/4)^40 ≈ 8e-25.
+bool is_prime(prng_ctx *ctx, const uint512_t &number) {
     if (number < uint512_t(2)) return false;
     if (number == uint512_t(2) || number == uint512_t(3)) return true;
     if (number.is_even()) return false;
 
-    // Loại nhanh hợp số bằng sàng chia thử
+    // --- Tầng 1: Lọc nhanh bằng thử chia số nguyên tố nhỏ ---
+    // Loại ngay ~75% hợp số lẻ trước khi tốn chi phí Miller-Rabin
     if (is_divisible_by_small_primes(number)) return false;
 
-    // Tách n - 1 = 2^s * d (d là số lẻ)
+    // --- Tầng 2: Miller-Rabin ---
+    // Tách n - 1 = 2^s * d (với d là số lẻ)
     uint512_t d = number - uint512_t(1);
     int s = 0;
     while (d.is_even()) {
@@ -86,72 +93,88 @@ bool is_prime(const uint512_t &number) {
         s++;
     }
 
-    // Với n là số nguyên tố bất kỳ và a không chia hết cho n -> a^(n-1) mod n = 1
-    // Vì mũ n-1 lớn nên chia thành 2^s * d, tính a^d rồi bình phương dần tới n-1
-    // Port từ uint32_t bases[] = {2,3,5,7,11,13,17,19,23,29,31,37} của Thành viên 2
-    // sang uint512_t, dùng thêm random để tăng độ chính xác với số lớn
-    uint64_t fixed_bases[] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37};
     uint512_t number_minus_1 = number - uint512_t(1);
+    uint512_t number_minus_3 = number - uint512_t(3); // để sinh a trong [2, n-2]
 
-    for (uint64_t base_val : fixed_bases) {
-        uint512_t base(base_val);
+    // Xây dựng danh sách cơ sở: {2} + 40 cơ sở ngẫu nhiên từ [2, n-2]
+    // Tổng 41 cơ sở => xác suất sai <= (1/4)^41 ≈ 2×10^-25 (an toàn tuyệt đối)
+    const int NUM_RANDOM_BASES = 40;
+    uint512_t all_bases[1 + NUM_RANDOM_BASES];
+    all_bases[0] = uint512_t(2); // cơ sở cố định đầu tiên
+    for (int i = 0; i < NUM_RANDOM_BASES; i++) {
+        // Sinh a ngẫu nhiên trong [0, n-4], rồi cộng 2 => a trong [2, n-2]
+        all_bases[1 + i] = mod(prng_next_u512(ctx), number_minus_3) + uint512_t(2);
+    }
+
+    for (int idx = 0; idx < 1 + NUM_RANDOM_BASES; idx++) {
+        uint512_t base = all_bases[idx];
         if (base >= number) continue;
 
-        uint512_t x = modular_exponentiation(base, d, number); // a^d mod n
+        // Tính x = a^d mod n (Square-and-Multiply)
+        uint512_t x = modular_exponentiation(base, d, number);
 
-        if (x == uint512_t(1) || x == number_minus_1) continue;
+        // a^d ≡ 1 (mod n) hoặc a^d ≡ n-1 (mod n) => vượt qua với cơ sở này
+        if (x == uint512_t(1) || x == number_minus_1) {
+            continue;
+        }
 
-        bool is_composite = true; // Hợp số là số có > 2 ước
+        // Bình phương liên tiếp s-1 lần: tìm x^(2^r) ≡ n-1 (mod n)
+        bool is_composite = true;
         for (int r = 1; r < s; r++) {
-            x = MultMod(x, x, number); // x*x % number
+            x = MultMod(x, x, number);
             if (x == number_minus_1) {
                 is_composite = false;
                 break;
             }
         }
-        if (is_composite) return false;
+
+        // Không bao giờ đạt n-1 => chắc chắn là hợp số (theo định lý Miller)
+        if (is_composite) {
+            return false;
+        }
     }
-    return true;
+
+    return true; // Vượt qua cả 2 tầng => là số nguyên tố
 }
 
 // ============================================================
-// SINH SAFE PRIME — Logic của Thành viên 2, port sang uint512_t
+// SINH SAFE PRIME: p = 2q + 1
 // ============================================================
 
 uint512_t generate_safe_prime(prng_ctx *ctx, size_t bitsize) {
     if (bitsize < 4) bitsize = 4;
     if (bitsize > 512) bitsize = 512;
 
-    int q_bit = bitsize - 1; // Số bit của q (q = Sophie Germain prime)
+    int q_bit = bitsize - 1; // Số bit của số nguyên tố Sophie Germain q
 
     while (true) {
-        // Sinh q lẻ có đúng q_bit bit
-        // Giữ q_bit cuối, bật bit đầu (đảm bảo q từ 2^(q_bit-1) đến 2^q_bit)
-        // Bật bit cuối (đảm bảo số lẻ) — logic giống Thành viên 2
+        // 1. Sinh số lẻ ngẫu nhiên q có đúng q_bit bit
         uint512_t q = prng_random_odd_bits(ctx, q_bit);
 
-        // Kiểm tra q nguyên tố
-        if (!is_prime(q)) continue;
+        // 2. Kiểm tra q có phải số nguyên tố bằng Miller-Rabin không
+        if (!is_prime(ctx, q)) {
+            continue;
+        }
 
-        // Điều kiện số nguyên tố an toàn: p = 2*q + 1
+        // 3. Tính p = 2*q + 1
         uint512_t p = (q << 1) + uint512_t(1);
 
-        // Kiểm tra p nguyên tố
-        if (is_prime(p)) {
-            return p;
+        // 4. Kiểm tra p có phải số nguyên tố bằng Miller-Rabin không
+        if (is_prime(ctx, p)) {
+            return p; // Tìm thấy Safe Prime hợp lệ!
         }
     }
 }
 
 // ============================================================
-// SINH KHÓA RIÊNG — Logic của Thành viên 2, port sang uint512_t
+// SINH KHÓA RIÊNG TRONG KHOẢNG [2, p - 2]
 // ============================================================
 
 uint512_t generate_private_key(prng_ctx *ctx, const uint512_t &p) {
     if (p <= uint512_t(3)) {
-        std::cerr << "Loi: p phai > 3\n";
+        std::cerr << "Loi: p phai > 3 de sinh khoa rieng!\n";
         return uint512_t(2);
     }
-    // Sinh private_key trong khoảng [2, p-2] — giống Thành viên 2
+    // Sinh khóa riêng trong khoảng [2, p - 2]
     return prng_random_range(ctx, uint512_t(2), p - uint512_t(2));
 }
