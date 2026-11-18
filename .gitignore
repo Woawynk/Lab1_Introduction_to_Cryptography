@@ -22,6 +22,9 @@ ON_TAP_VAN_DAP.md
 *.exe
 *.out
 *.app
+main
+test_suite
+test_member1
 bin/
 build/
 bin/build/

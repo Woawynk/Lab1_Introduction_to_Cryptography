@@ -23,6 +23,8 @@
 \usepackage{fancyhdr}
 \usepackage{hyperref}
 \usepackage{caption}
+\theoremstyle{plain}
+\newtheorem{theorem}{Định lý}
 
 % --- Cấu hình Hyperref ---
 \hypersetup{
@@ -63,6 +65,7 @@
 
 % --- Cấu hình Header & Footer ---
 \pagestyle{fancy}
+\setlength{\headheight}{14pt}
 \fancyhf{}
 \rhead{\small Nhập môn Mã hóa Mật mã — Lab 01}
 \lhead{\small Số nguyên tố \& Trao đổi khóa Diffie-Hellman}
@@ -88,8 +91,8 @@
     \begin{flushleft}
     \textbf{Sinh viên thực hiện:}\\[0.3cm]
     \begin{tabular}{llr}
-        1. [Họ và tên SV 1] & - MSSV: [MSSV 1] & (Nhóm trưởng)\\
-        2. [Họ và tên SV 2] & - MSSV: [MSSV 2] & (Thành viên)\\
+        1. [Huỳnh Thái Hoà] & - MSSV: [24127374] & (Nhóm trưởng)\\
+        2. [Nguyễn Hoài Đức] & - MSSV: [24127344] & (Thành viên)\\
     \end{tabular}
     \end{flushleft}
 
@@ -106,7 +109,7 @@
 \section{Hệ thống xử lý số lớn (Big Number System)}
 
 \subsection{Đặt vấn đề và Thiết kế cấu trúc dữ liệu \texttt{uint512\_t}}
-Trong mật mã học khóa công khai (Public-key Cryptography), bài toán trao đổi khóa Diffie-Hellman (DHKE) đòi hỏi việc tính toán trên các số nguyên có kích thước tối thiểu từ 512 bit đến 2048 bit nhằm đảm bảo độ an toàn chống lại các thuật toán phân tích số nguyên và thuật toán giải logarit rời rạc. Tuy nhiên, các kiến trúc máy tính hiện đại và ngôn ngữ lập trình C/C++ tiêu chuẩn chỉ hỗ trợ các kiểu dữ liệu số nguyên tối đa là 64 bit (\texttt{uint64\_t}). 
+Trong bài lab này, nhóm sử dụng số nguyên 512-bit theo yêu cầu thực hành. Đây là kích thước phục vụ mục tiêu minh họa, không nên được xem là mức khuyến nghị cho hệ thống mật mã hiện đại; các hệ thống thực tế thường sử dụng tham số lớn hơn hoặc elliptic-curve Diffie-Hellman. Tuy nhiên, các kiến trúc máy tính hiện đại và ngôn ngữ lập trình C/C++ tiêu chuẩn chỉ hỗ trợ các kiểu dữ liệu số nguyên tối đa là 64 bit (\texttt{uint64\_t}).
 
 Để giải quyết bài toán này mà không sử dụng bất kỳ thư viện hỗ trợ số lớn bên ngoài nào (như GNU Multiple Precision Arithmetic Library - GMP hay NTL), nhóm đã tự thiết kế và cài đặt cấu trúc số nguyên lớn không dấu 512-bit \texttt{uint512\_t} hoàn toàn độc lập:
 
@@ -318,19 +321,19 @@ uint512_t modular_exponentiation(const uint512_t &base, const uint512_t &exponen
 \subsection{Tổng quan và Sự bất khả thi của Phép thử xác định}
 Trong mật mã học khóa công khai, việc kiểm tra tính nguyên tố là trọng tâm của quá trình tạo khóa. 
 \begin{itemize}
-    \item **Phương pháp chia thử (Trial Division):** Kiểm tra xem $n$ có chia hết cho bất kỳ số nguyên nào từ $2$ đến $\lfloor\sqrt{n}\rfloor$ hay không. Với $n \approx 2^{512}$, $\sqrt{n} \approx 2^{256} \approx 10^{77}$. Dù sử dụng siêu máy tính nhanh nhất thế giới thực hiện hàng tỷ phép tính mỗi giây, thời gian để hoàn thành phép chia thử này vẫn lớn hơn tuổi thọ của vũ trụ.
-    \item **Thuật toán AKS (Agrawal-Kayal-Saxena):** Thuật toán xác định đa thức đầu tiên ra đời năm 2002 với độ phức tạp $\tilde{O}(\log^6 n)$. Mặc dù có ý nghĩa lý thuyết to lớn, hằng số ẩn của AKS quá lớn khiến nó không thực tế cho các ứng dụng mật mã thời gian thực.
+    \item \textbf{Phương pháp chia thử (Trial Division):} Kiểm tra xem $n$ có chia hết cho bất kỳ số nguyên nào từ $2$ đến $\lfloor\sqrt{n}\rfloor$ hay không. Với $n \approx 2^{512}$, $\sqrt{n} \approx 2^{256} \approx 10^{77}$. Dù sử dụng siêu máy tính nhanh nhất thế giới thực hiện hàng tỷ phép tính mỗi giây, thời gian để hoàn thành phép chia thử này vẫn lớn hơn tuổi thọ của vũ trụ.
+    \item \textbf{Thuật toán AKS (Agrawal-Kayal-Saxena):} Thuật toán xác định đa thức đầu tiên ra đời năm 2002 với độ phức tạp $\tilde{O}(\log^6 n)$. Mặc dù có ý nghĩa lý thuyết to lớn, hằng số ẩn của AKS quá lớn khiến nó không thực tế cho các ứng dụng mật mã thời gian thực.
 \end{itemize}
-Vì vậy, các **thuật toán kiểm tra số nguyên tố xác suất (Probabilistic Primality Tests)** là phương án tối ưu và duy nhất được áp dụng trong thực tiễn mật mã học.
+Vì vậy, các \textbf{thuật toán kiểm tra số nguyên tố xác suất (Probabilistic Primality Tests)} là phương án tối ưu và duy nhất được áp dụng trong thực tiễn mật mã học.
 
 \subsection{Định lý Fermat nhỏ và Bài toán số Carmichael}
 Định lý Fermat nhỏ phát biểu rằng: Nếu $p$ là một số nguyên tố và $\gcd(a, p) = 1$, thì:
 \begin{equation}
 a^{p-1} \equiv 1 \pmod p
 \end{equation}
-Tuy nhiên, chiều ngược lại không đúng: Nếu $a^{n-1} \equiv 1 \pmod n$ với một cơ sở $a$, $n$ chưa chắc là số nguyên tố mà có thể là một **hợp số giả nguyên tố Fermat** (Fermat Pseudoprime).
+Tuy nhiên, chiều ngược lại không đúng: Nếu $a^{n-1} \equiv 1 \pmod n$ với một cơ sở $a$, $n$ chưa chắc là số nguyên tố mà có thể là một \textbf{hợp số giả nguyên tố Fermat} (Fermat Pseudoprime).
 
-Nguy hiểm hơn, tồn tại vô hạn các số **Carmichael** (ví dụ $561 = 3 \times 11 \times 17$, $1105$, $1729$...). Đây là những hợp số thỏa mãn đẳng thức Fermat:
+Nguy hiểm hơn, tồn tại vô hạn các số \textbf{Carmichael} (ví dụ $561 = 3 \times 11 \times 17$, $1105$, $1729$...). Đây là những hợp số thỏa mãn đẳng thức Fermat:
 \begin{equation}
 a^{n-1} \equiv 1 \pmod n \quad \forall a \text{ thỏa mãn } \gcd(a, n) = 1
 \end{equation}
@@ -351,29 +354,41 @@ chỉ có đúng hai nghiệm duy nhất là $x \equiv 1 \pmod p$ hoặc $x \equ
 $x^2 \equiv 1 \pmod p \iff x^2 - 1 \equiv 0 \pmod p \iff (x - 1)(x + 1) \equiv 0 \pmod p$. Vì $p$ là số nguyên tố, $p$ phải chia hết cho $x - 1$ hoặc $x + 1$, suy ra $x \equiv 1$ hoặc $x \equiv -1 \pmod p$.
 \end{proof}
 
-Nếu trong quá trình tính toán lũy thừa, ta tìm thấy một giá trị $x \not\equiv \pm 1 \pmod n$ mà $x^2 \equiv 1 \pmod n$, thì $n$ **chắc chắn là hợp số** (không có ngoại lệ).
+Nếu trong quá trình tính toán lũy thừa, ta tìm thấy một giá trị $x \not\equiv \pm 1 \pmod n$ mà $x^2 \equiv 1 \pmod n$, thì $n$ \textbf{chắc chắn là hợp số} (không có ngoại lệ).
 
 \subsubsection{Quy trình thuật toán trong chương trình — Chiến lược hai tầng}
 Chương trình áp dụng chiến lược kiểm tra hai tầng (Two-Phase Primality Testing) nhằm tối ưu tốc độ sinh khóa, đặc biệt với số 512-bit.
 
 \paragraph{Tầng 1 — Lọc nhanh bằng thử chia (Trial Division).}
-Trước khi chạy Miller-Rabin tốn kém, chương trình thử chia $n$ cho 15 số nguyên tố đầu tiên:
+Trước khi chạy Miller-Rabin tốn kém, chương trình có hai bước lọc nhanh:
+\begin{enumerate}
+    \item Lọc riêng các ứng viên chia hết cho $3$, $5$ hoặc $7$ bằng phép tính theo từng word 64-bit. Với mỗi word $w_i$, $2^{64} \equiv 1 \pmod 3$, $2^{64} \equiv 1 \pmod 5$, và $2^{64} \equiv 2 \pmod 7$, do đó:
+    \[
+    n \equiv \sum_{i=0}^{7} w_i \pmod 3
+    \quad\text{và}\quad
+    n \equiv \sum_{i=0}^{7} w_i \pmod 5,
+    \quad
+    n \equiv \sum_{i=0}^{7} w_i(2^i)\pmod 7.
+    \]
+    Nếu tổng theo modulo bằng $0$, số ứng viên chắc chắn là hợp số. Cách này không gọi hàm chia số lớn.
+    \item Sau bộ lọc $3/5/7$, thử chia $n$ cho các số nguyên tố nhỏ chưa được lọc:
 \begin{equation}
-\mathcal{S} = \{3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53\}
+\mathcal{S} = \{11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53\}
 \end{equation}
-Nếu $n \equiv 0 \pmod{p_i}$ với bất kỳ $p_i \in \mathcal{S}$, kết luận ngay $n$ là hợp số và bỏ qua. Tầng lọc này loại bỏ được khoảng $75\%$ hợp số lẻ ngẫu nhiên chỉ với 15 phép toán chia đơn giản.
+\end{enumerate}
+Nếu $n \equiv 0 \pmod{p_i}$ với bất kỳ $p_i \in \mathcal{S}$, kết luận ngay $n$ là hợp số và bỏ qua. Tầng lọc kết hợp $3/5/7$ cùng các số nhỏ còn lại giúp loại phần lớn hợp số trước Miller--Rabin.
 
-\textbf{Lý do chỉ dùng 15 số nguyên tố nhỏ:} Với số 512-bit, hàm \texttt{mod()} tự cài đặt theo giải thuật chia nhị phân (long division bit-by-bit) phải duyệt qua 512 bước dịch bit cho mỗi lần gọi. Nếu thử chia 100 số nguyên tố nhỏ, chi phí lên đến $100 \times 512 = 51.200$ thao tác số lớn, trong khi các số nguyên tố thứ 16 trở đi chỉ bổ sung thêm xác suất lọc rất nhỏ ($< 3\%$). Điểm cân bằng tối ưu là 10--20 số đầu.
+\textbf{Lý do không thử lại $3$, $5$, $7$ trong danh sách:} Ba số này đã được lọc nhanh bằng phép modulo word; danh sách còn lại gồm 12 số nguyên tố nhỏ chưa trùng bước lọc. Việc chọn 10--20 số nguyên tố đầu là cân bằng hợp lý giữa chi phí chia số lớn và xác suất loại hợp số.
 
 \paragraph{Tầng 2 — Miller-Rabin với cơ sở hỗn hợp.}
 Cho số lẻ $n > 2$ đã vượt qua tầng 1:
 \begin{enumerate}
     \item Phân tích $n - 1 = 2^s \cdot d$, trong đó $d$ là số lẻ và $s \ge 1$ (đếm số lần dịch phải liên tiếp khi $d$ chẵn).
-    \item Xây dựng tập cơ sở hỗn hợp gồm 41 phần tử:
+    \item Xây dựng tập cơ sở hỗn hợp gồm 40 phần tử:
     \begin{equation}
-    \mathcal{B} = \{2\} \cup \{a_1, a_2, \ldots, a_{40}\}, \quad a_i \xleftarrow{R} [2,\, n-2]
+    \mathcal{B} = \{2\} \cup \{a_1, a_2, \ldots, a_{39}\}, \quad a_i \xleftarrow{R} [2,\, n-2]
     \end{equation}
-    trong đó cơ sở cố định $a = 2$ luôn được kiểm tra đầu tiên (loại $>99.9\%$ hợp số ngay vòng đầu không tốn chi phí PRNG), và 40 cơ sở còn lại được sinh ngẫu nhiên từ CSPRNG SHAKE-128 trong khoảng $[2, n-2]$.
+    trong đó cơ sở cố định $a = 2$ luôn được kiểm tra đầu tiên (loại $>99.9\%$ hợp số ngay vòng đầu không tốn chi phí PRNG), và 39 cơ sở còn lại được sinh ngẫu nhiên từ CSPRNG SHAKE-128 trong khoảng $[2, n-2]$.
     \item Với mỗi cơ sở $a \in \mathcal{B}$:
     \begin{itemize}
         \item Tính $x = a^d \pmod n$ bằng \texttt{modular\_exponentiation} (Square-and-Multiply).
@@ -384,18 +399,18 @@ Cho số lẻ $n > 2$ đã vượt qua tầng 1:
             \item Nếu duyệt hết $s - 1$ lần bình phương mà không gặp $n - 1$, $n$ chắc chắn là hợp số.
         \end{itemize}
     \end{itemize}
-    \item Nếu $n$ vượt qua toàn bộ 41 cơ sở trong $\mathcal{B}$, kết luận $n$ là số nguyên tố.
+    \item Nếu $n$ vượt qua toàn bộ 40 cơ sở trong $\mathcal{B}$, kết luận $n$ là số nguyên tố.
 \end{enumerate}
 
 \subsubsection{Phân tích độ an toàn và hiệu năng}
 \begin{itemize}
-    \item \textbf{Xác suất lỗi:} Mỗi cơ sở độc lập loại bỏ ít nhất $3/4$ số hợp số còn sót. Với 41 cơ sở hỗn hợp:
+    \item \textbf{Xác suất lỗi:} Mỗi cơ sở độc lập loại bỏ ít nhất $3/4$ số hợp số còn sót. Với 40 cơ sở hỗn hợp:
     \begin{equation}
-    P(\text{Lỗi}) \le \left(\frac{1}{4}\right)^{41} \approx 2.09 \times 10^{-25}
+    P(\text{Lỗi}) \le \left(\frac{1}{4}\right)^{40} \approx 8.27 \times 10^{-25}
     \end{equation}
-    Xác suất này nhỏ hơn nhiều lần so với xác suất lỗi phần cứng ngẫu nhiên, đảm bảo an toàn tuyệt đối cho ứng dụng thực tế.
+    Đây chỉ là một cận xác suất dưới các giả định của Miller--Rabin; nó không phải chứng nhận nguyên tố tuyệt đối và không thay thế yêu cầu chọn tham số mật mã phù hợp.
     \item \textbf{Ưu điểm của cơ sở ngẫu nhiên từ CSPRNG:} Các cơ sở cố định có nguy cơ bị khai thác nếu số được thiết kế đặc biệt để vượt qua một tập cơ sở xác định. Dùng cơ sở ngẫu nhiên từ SHAKE-128 loại trừ hoàn toàn khả năng này, nâng cao độ bảo mật so với chỉ dùng cơ sở cố định.
-    \item \textbf{Tốc độ:} Hầu hết hợp số bị loại ngay tầng 1 (15 phép chia rẻ tiền) hoặc tại vòng đầu của tầng 2 với $a = 2$. Toàn bộ 41 cơ sở chỉ được chạy đủ khi $n$ có độ chắc chắn cao là số nguyên tố.
+    \item \textbf{Tốc độ:} Hầu hết hợp số bị loại ngay tầng 1 (15 phép chia rẻ tiền) hoặc tại vòng đầu của tầng 2 với $a = 2$. Toàn bộ 40 cơ sở chỉ được chạy đủ khi $n$ có độ chắc chắn cao là số nguyên tố.
 \end{itemize}
 
 \newpage
@@ -404,14 +419,14 @@ Cho số lẻ $n > 2$ đã vượt qua tầng 1:
 \subsection{Tầm quan trọng sống còn của tính ngẫu nhiên}
 Trong an toàn thông tin, tính ngẫu nhiên là gốc rễ của mọi bảo mật:
 \begin{itemize}
-    \item Toàn bộ độ bí mật của giao thức Diffie-Hellman phụ thuộc vào việc kẻ tấn công **không thể đoán trước được khóa riêng $a$ và $b$**.
+    \item Toàn bộ độ bí mật của giao thức Diffie-Hellman phụ thuộc vào việc kẻ tấn công \textbf{không thể đoán trước được khóa riêng $a$ và $b$}.
     \item Nếu bộ sinh số ngẫu nhiên bị thiên vị (bias) hoặc có chu kỳ lặp ngắn, không gian khóa sẽ bị thu hẹp đột ngột, cho phép tin tặc dò quét toàn bộ khóa riêng trong thời gian ngắn.
 \end{itemize}
 
 \textbf{Dẫn chứng lịch sử về lỗ hổng PRNG:}
 \begin{itemize}
-    \item **Lỗ hổng Debian OpenSSL (2008 - CVE-2008-0166):** Một lập trình viên bảo trì gói Debian đã vô tình xóa hai dòng code thu thập entropy của bộ sinh ngẫu nhiên để tắt cảnh báo công cụ phân tích tĩnh. Hậu quả là bộ sinh chỉ sử dụng định danh tiến trình (Process ID - PID có tối đa 32,768 giá trị) làm seed. Toàn bộ các khóa SSH, chứng chỉ SSL/TLS sinh ra trên hệ điều hành Debian/Ubuntu trong suốt hai năm bị bẻ gãy hoàn toàn vì tin tặc chỉ cần thử 32,768 khóa.
-    \item **Lỗ hổng Dual\_EC\_DRBG (2013):** Một thuật toán sinh số ngẫu nhiên từng được NIST chuẩn hóa nhưng bị phát hiện chứa backdoor do NSA cài cắm, cho phép cơ quan này khôi phục khóa bí mật khi biết một số quan sát đầu ra.
+    \item \textbf{Lỗ hổng Debian OpenSSL (2008 - CVE-2008-0166):} Một lập trình viên bảo trì gói Debian đã vô tình xóa hai dòng code thu thập entropy của bộ sinh ngẫu nhiên để tắt cảnh báo công cụ phân tích tĩnh. Hậu quả là bộ sinh chỉ sử dụng định danh tiến trình (Process ID - PID có tối đa 32,768 giá trị) làm seed. Toàn bộ các khóa SSH, chứng chỉ SSL/TLS sinh ra trên hệ điều hành Debian/Ubuntu trong suốt hai năm bị bẻ gãy hoàn toàn vì tin tặc chỉ cần thử 32,768 khóa.
+    \item \textbf{Lỗ hổng Dual\_EC\_DRBG (2013):} Một thuật toán sinh số ngẫu nhiên từng được NIST chuẩn hóa nhưng bị phát hiện chứa backdoor do NSA cài cắm, cho phép cơ quan này khôi phục khóa bí mật khi biết một số quan sát đầu ra.
 \end{itemize}
 
 \subsection{Phân loại các bộ sinh số ngẫu nhiên}
@@ -431,9 +446,9 @@ Tốc độ & Chậm, phụ thuộc phần cứng & Rất nhanh & Nhanh, an toà
 \end{table}
 
 \begin{itemize}
-    \item **Tại sao không dùng \texttt{rand()} hay \texttt{std::mt19937} (Mersenne Twister)?** 
-    Thuật toán Mersenne Twister có chu kỳ cực lớn ($2^{19937}-1$) và phân phối thống kê rất tốt, nhưng nó **hoàn toàn không an toàn trong mật mã**. Chỉ cần quan sát 624 đầu ra 32-bit liên tiếp của Mersenne Twister, kẻ tấn công có thể khôi phục 100\% ma trận trạng thái nội bộ và tính toán chính xác mọi số ngẫu nhiên trong tương lai và quá khứ.
-    \item **Tiêu chuẩn CSPRNG:** Bộ sinh giả ngẫu nhiên chuẩn mật mã bắt buộc phải thỏa mãn:
+    \item \textbf{Tại sao không dùng \texttt{rand()} hay \texttt{std::mt19937} (Mersenne Twister)?}
+    Thuật toán Mersenne Twister có chu kỳ cực lớn ($2^{19937}-1$) và phân phối thống kê rất tốt, nhưng nó \textbf{hoàn toàn không an toàn trong mật mã}. Chỉ cần quan sát 624 đầu ra 32-bit liên tiếp của Mersenne Twister, kẻ tấn công có thể khôi phục 100\% ma trận trạng thái nội bộ và tính toán chính xác mọi số ngẫu nhiên trong tương lai và quá khứ.
+    \item \textbf{Tiêu chuẩn CSPRNG:} Bộ sinh giả ngẫu nhiên chuẩn mật mã bắt buộc phải thỏa mãn:
     \begin{enumerate}
         \item \textit{Next-bit Unpredictability:} Dù biết toàn bộ các bit đã sinh trước đó, không thể đoán được bit tiếp theo với xác suất lớn hơn $1/2$.
         \item \textit{Forward Secrecy / State Compromise Extension:} Ngay cả khi trạng thái nội bộ tại thời điểm hiện tại bị kẻ tấn công đọc được, kẻ tấn công cũng không thể suy ngược lại các số đã sinh trong quá khứ.
@@ -441,7 +456,7 @@ Tốc độ & Chậm, phụ thuộc phần cứng & Rất nhanh & Nhanh, an toà
 \end{itemize}
 
 \subsection{Cấu trúc bọt biển (Sponge Construction) và Chuẩn SHAKE-128}
-Đồ án sử dụng chuẩn băm NIST FIPS 202 (Keccak) ở chế độ hàm mở rộng đầu ra (\textbf{XOF - Extendable-Output Function}): **SHAKE-128**.
+Đồ án sử dụng chuẩn băm NIST FIPS 202 (Keccak) ở chế độ hàm mở rộng đầu ra (\textbf{XOF - Extendable-Output Function}): \textbf{SHAKE-128}.
 
 Khác với các hàm băm cổ điển (MD5, SHA-1, SHA-256) sử dụng cấu trúc Merkle-Damgård có độ dài đầu ra cố định, cấu trúc bọt biển của SHAKE-128 hoạt động trên một trạng thái nội bộ 1600 bit ($b = 1600$), được chia thành:
 \begin{itemize}
@@ -455,7 +470,7 @@ Khác với các hàm băm cổ điển (MD5, SHA-1, SHA-256) sử dụng cấu 
     \item \textbf{Giai đoạn Vắt (Squeezing Phase):} Khi cần sinh số ngẫu nhiên, các khối dữ liệu ngẫu nhiên được trích xuất liên tục từ $r$ bit của trạng thái nội bộ. Nếu cần thêm dữ liệu, trạng thái lại tiếp tục biến đổi qua hàm hoán vị $f$.
 \end{enumerate}
 
-Nhờ cấu trúc bọt biển, hàm \texttt{prng\_next\_u512} trích xuất 64 byte (512 bit) có tính ngẫu nhiên đồng đều tuyệt đối và khả năng kháng phân tích mật mã chuẩn NIST.
+Nhờ cấu trúc bọt biển, hàm \texttt{prng\_next\_u512} trích xuất 64 byte (512 bit) từ SHAKE-128. Seed ban đầu được lấy từ API ngẫu nhiên của hệ điều hành; khi ánh xạ sang một khoảng số nguyên, chương trình dùng lấy mẫu loại bỏ (rejection sampling) để tránh modulo bias.
 
 \newpage
 \section{Trao đổi khóa Diffie-Hellman (DHKE)}
@@ -482,11 +497,19 @@ Tính bí mật: $s_A = B^a \pmod p$ & & Tính bí mật: $s_B = A^b \pmod p$ \\
 s_A \equiv B^a \equiv (g^b)^a \equiv g^{ba} \equiv g^{ab} \equiv (g^a)^b \equiv A^b \equiv s_B \pmod p
 \end{equation}
 
+Theo yêu cầu đề bài, chương trình cố định phần tử sinh $g = 2$. Tuy nhiên, $2$ không phải là primitive root của mọi safe prime. Chương trình chỉ chấp nhận safe prime $p=2q+1$ thỏa:
+\[
+2^2 \not\equiv 1 \pmod p
+\quad\text{và}\quad
+2^q \equiv -1 \pmod p.
+\]
+Hai điều kiện này bảo đảm phần tử $2$ có cấp $2q=p-1$ trong $\mathbb{Z}_p^*$.
+
 \subsection{Bài toán Logarit rời rạc (DLP) và Bài toán CDH}
 Kẻ nghe lén Eve quan sát trên đường truyền sẽ thu được toàn bộ tham số công khai: $p$, $g$, $A = g^a \pmod p$ và $B = g^b \pmod p$.
 \begin{itemize}
-    \item **Bài toán Diffie-Hellman tính toán (Computational Diffie-Hellman - CDH):** Cho $g, g^a, g^b \in \mathbb{Z}_p^*$, tính $g^{ab} \pmod p$.
-    \item **Bài toán Logarit rời rạc (Discrete Logarithm Problem - DLP):** Cho $g, A = g^a \pmod p$, tìm lại số mũ bí mật $a$.
+    \item \textbf{Bài toán Diffie-Hellman tính toán (Computational Diffie-Hellman - CDH):} Cho $g, g^a, g^b \in \mathbb{Z}_p^*$, tính $g^{ab} \pmod p$.
+    \item \textbf{Bài toán Logarit rời rạc (Discrete Logarithm Problem - DLP):} Cho $g, A = g^a \pmod p$, tìm lại số mũ bí mật $a$.
 \end{itemize}
 Nếu giải được bài toán DLP, Eve sẽ tìm được $a$ và dễ dàng tính $s = B^a \pmod p$. Tuy nhiên, với số nguyên tố $p \ge 512$ bit, bài toán DLP trên nhóm cyclic $\mathbb{Z}_p^*$ là bất khả thi về mặt tính toán đối với mọi máy tính cổ điển.
 
@@ -502,11 +525,11 @@ Nếu $p$ là một số nguyên tố ngẫu nhiên bình thường, $p - 1$ có
 \begin{equation}
 p - 1 = p_1^{e_1} \cdot p_2^{e_2} \cdots p_k^{e_k} \quad (\text{với các } p_i \text{ rất nhỏ})
 \end{equation}
-Khi đó, kẻ tấn công áp dụng **thuật toán Pohlig-Hellman**:
+Khi đó, kẻ tấn công áp dụng \textbf{thuật toán Pohlig-Hellman}:
 \begin{enumerate}
     \item Ánh xạ bài toán logarit rời rạc $g^a \equiv A \pmod p$ vào từng nhóm con nhỏ cấp $p_i^{e_i}$.
     \item Giải bài toán DLP trên từng nhóm con nhỏ đó bằng thuật toán Baby-step Giant-step hoặc Pollard's rho với độ phức tạp cực thấp $O(\sum e_i \sqrt{p_i})$.
-    \item Áp dụng **Định lý phần dư Trung Hoa (Chinese Remainder Theorem - CRT)** để ghép các nghiệm nhỏ lại và tìm ra chính xác khóa riêng $a$ trong thời gian tính bằng giây!
+    \item Áp dụng \textbf{Định lý phần dư Trung Hoa (Chinese Remainder Theorem - CRT)} để ghép các nghiệm nhỏ lại và tìm ra chính xác khóa riêng $a$ trong thời gian tính bằng giây!
 \end{enumerate}
 
 \subsubsection{Cơ chế bảo vệ của Safe Prime}
@@ -523,15 +546,15 @@ $p - 1$ chỉ có đúng hai ước số nguyên tố duy nhất:
     \item Ước số $2$: Tương ứng nhóm con cấp 2 tầm thường ($\{1, -1\}$).
     \item Ước số nguyên tố cực lớn $q$: Nhóm con cấp $q$.
 \end{itemize}
-Vì không tồn tại bất kỳ ước số nguyên tố nhỏ nào khác ngoài số 2, thuật toán Pohlig-Hellman hoàn toàn bị vô hiệu hóa. Đồng thời, cấu trúc này triệt tiêu hoàn toàn các cuộc tấn công **giam giữ nhóm con nhỏ (Small Subgroup Confinement Attack)**, đảm bảo giao thức đạt mức an toàn tối đa.
+Vì không tồn tại bất kỳ ước số nguyên tố nhỏ nào khác ngoài số 2, safe prime làm giảm đáng kể hiệu quả của Pohlig-Hellman. Tuy nhiên, giao thức vẫn phải chọn đúng phần tử sinh và kiểm tra các giá trị công khai nhận được; safe prime không tự động loại bỏ mọi rủi ro nhóm con nhỏ.
 
 \subsection{Ứng dụng thực tế của Diffie-Hellman}
 
 \subsubsection{1. Giao thức bảo mật tầng truyền vận TLS 1.3 (HTTPS)}
-Trong toàn bộ hệ thống web an toàn hiện đại (HTTPS), chuẩn **TLS 1.3** đã loại bỏ hoàn toàn cơ chế mã hóa khóa bằng RSA và bắt buộc sử dụng **Ephemeral Diffie-Hellman (DHE / ECDHE)**.
+Trong toàn bộ hệ thống web an toàn hiện đại (HTTPS), chuẩn \textbf{TLS 1.3} đã loại bỏ hoàn toàn cơ chế mã hóa khóa bằng RSA và bắt buộc sử dụng \textbf{Ephemeral Diffie-Hellman (DHE / ECDHE)}.
 \begin{itemize}
     \item Mỗi phiên duyệt web mới sinh ra một cặp khóa $(a, b)$ ngẫu nhiên tạm thời (\textit{ephemeral}) và hủy bỏ ngay khi phiên kết thúc.
-    \item **Bảo mật chuyển tiếp hoàn hảo (Perfect Forward Secrecy - PFS):** Ngay cả khi máy chủ web bị tin tặc đột nhập trong tương lai và đánh cắp khóa riêng dài hạn của máy chủ, tin tặc cũng **hoàn toàn không thể giải mã các gói tin dữ liệu HTTPS đã ghi lại trong quá khứ**, vì khóa phiên được thiết lập độc lập qua Diffie-Hellman tạm thời và không thể khôi phục lại.
+    \item \textbf{Bảo mật chuyển tiếp hoàn hảo (Perfect Forward Secrecy - PFS):} Ngay cả khi máy chủ web bị tin tặc đột nhập trong tương lai và đánh cắp khóa riêng dài hạn của máy chủ, tin tặc cũng \textbf{hoàn toàn không thể giải mã các gói tin dữ liệu HTTPS đã ghi lại trong quá khứ}, vì khóa phiên được thiết lập độc lập qua Diffie-Hellman tạm thời và không thể khôi phục lại.
 \end{itemize}
 
 \subsubsection{2. Giao thức SSH (Secure Shell)}
@@ -545,15 +568,15 @@ Giao thức SSH dùng để quản trị máy chủ Linux từ xa sử dụng c�
 project_01_source/
 |-- u512.h / u512.cpp            # Khai bao va hien thuc so lon uint512_t
 |-- modular_math.h / .cpp        # mod, AddMod, MultMod, modular_exponentiation
-|-- dh.h / dh.cpp                # Miller-Rabin, sinh Safe Prime, sinh khoa rieng
+|-- dh.h / dh.cpp                # Miller-Rabin, sinh Safe Prime, kiem tra g = 2
 |-- main.cpp                     # Chuong trinh chinh mo phong Alice & Bob
-|-- test_member1.cpp            # Bo kiem thu don vi cho tang so hoc
+|-- test_suite.cpp              # Bo kiem thu so hoc, primality va DH
 |-- Makefile                     # Tu dong hoa bien dich bang g++ (C++14)
 `-- lib/fips202/                # Thu vien NIST Keccak/SHAKE-128 CSPRNG
 \end{verbatim}
 
 \subsection{Hướng dẫn biên dịch và Thực thi}
-Chương trình được thiết kế tương thích hoàn hảo tiêu chuẩn **C++14**, có thể biên dịch trực tiếp trên cả Linux và Windows (thông qua môi trường \texttt{w64devkit} / MinGW):
+Chương trình được thiết kế tương thích hoàn hảo tiêu chuẩn \textbf{C++14}, có thể biên dịch trực tiếp trên cả Linux và Windows (thông qua môi trường \texttt{w64devkit} / MinGW):
 
 \begin{lstlisting}[language=bash]
 # Di chuyen vao thu muc ma nguon
@@ -573,50 +596,62 @@ make clean
 Trong file \texttt{main.cpp}, người dùng có thể dễ dàng thay đổi:
 \begin{itemize}
     \item \texttt{bit\_size}: Kích thước bit của số nguyên tố an toàn (mặc định $512$ bit).
-    \item \texttt{g}: Phần tử sinh công khai (chọn $g = 2$).
+    \item \texttt{g}: Phần tử sinh công khai cố định $g=2$; chương trình chỉ chấp nhận Safe Prime mà $g=2$ là primitive root.
 \end{itemize}
 
 \subsection{Kết quả kiểm thử nghiệm thu thực tế}
-Bộ kiểm thử đơn vị \texttt{test\_member1} đã xác minh tính đúng đắn của toàn bộ các phép toán:
+Bộ kiểm thử \texttt{test\_suite} kiểm tra các nhóm chức năng chính:
 \begin{itemize}
-    \item Phép cộng, trừ, dịch bit đa độ chính xác xử lý cờ nhớ chính xác 100\%.
-    \item Kiểm chứng Định lý Fermat nhỏ: $3^{p-1} \equiv 1 \pmod p$ với số nguyên tố lớn.
-    \item Lũy thừa mô-đun với số mũ 512-bit thực tế: $2^{65537} \pmod{p_{512}}$ thực thi mượt mà.
+    \item Phép cộng, trừ, dịch bit và một số trường hợp biên 512-bit.
+    \item \texttt{mod}, \texttt{AddMod}, \texttt{MultMod} và lũy thừa mô-đun.
+    \item Miller--Rabin với số nguyên tố 101 và hợp số Carmichael 561.
+    \item Bộ lọc nhanh \texttt{is\_divisible\_by\_3\_5\_7} với các giá trị 15, 21, 25, 29 và 49.
+    \item Sinh safe prime nhỏ để kiểm tra, kiểm tra $g = 2$ là primitive root và xác minh hai phía DH tạo cùng bí mật.
 \end{itemize}
 
 \begin{figure}[h!]
     \centering
     \includegraphics[width=0.85\textwidth]{make_run_test.png}
-    \caption{Kết quả chạy bộ kiểm thử đơn vị thành công 100\% trên terminal}
+    \caption{Kết quả chạy bộ kiểm thử \texttt{test\_suite} thành công trên terminal}
 \end{figure}
 
 Chương trình chính \texttt{main} thực hiện sinh thành công Safe Prime 512-bit, sinh khóa riêng Alice $a$ và Bob $b$, tính khóa công khai $A, B$, tính bí mật chung $s_A, s_B$ và in kết quả xác thực:
 \begin{center}
-\textbf{\texttt{Qua trinh tinh toan dung khong? 1 (DUNG - BI MAT TRUNG KHOP 100\%)}}
+\textbf{\texttt{Qua trinh tinh toan dung khong? 1 (DUNG - BI MAT TRUNG KHOP)}}
 \end{center}
+
+Hình ảnh kết quả chạy chương trình chính được trình bày dưới đây:
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.95\textwidth]{make_run.png}
+    \caption{Kết quả sinh Safe Prime 512-bit và trao đổi khóa DH}
+\end{figure}
+
+Trong lần thực nghiệm ghi nhận tại \texttt{dh\_run.log}, chương trình sinh được Safe Prime 512-bit trong \textbf{413.793 giây}. Lần chạy này sử dụng seed ngẫu nhiên thực tế nên thời gian không thể coi là chuẩn duy nhất. Các lần chạy trước với seed, CPU và tải hệ thống khác nhau có thể mất khoảng từ 113 giây đến 413 giây; bộ lọc $3/5/7$ loại nhanh ứng viên hợp số nhưng không đảm bảo giảm thời gian ở mọi lần chạy.
 
 \newpage
 \section{Tự đánh giá và Hướng phát triển}
 
 \subsection{Ưu điểm của chương trình}
 \begin{enumerate}
-    \item **Tự cài đặt hoàn toàn từ đầu (From Scratch):** Tuân thủ tuyệt đối quy định không dùng thư viện ngoài (như GMP/NTL), độc lập 100\% trên chuẩn C++14.
-    \item **An toàn bộ nhớ và triệt tiêu tràn số:** Các giải thuật \texttt{mod}, \texttt{AddMod}, \texttt{MultMod} đảm bảo mọi biến trung gian đều $< p < 2^{512}$, loại bỏ hoàn toàn nguy cơ tràn số số học.
-    \item **Tương thích đa nền tảng:** Tự động phát hiện và hỗ trợ cả Linux (dùng \texttt{getrandom}) và Windows (dùng \texttt{CryptGenRandom}).
-    \item **Tính chính xác của thuật toán:** Kiểm tra số nguyên tố theo chiến lược hai tầng: tầng 1 lọc nhanh bằng 15 số nguyên tố nhỏ ($\le 53$), tầng 2 dùng Miller-Rabin với 41 cơ sở hỗn hợp (cơ sở cố định $a=2$ và 40 cơ sở ngẫu nhiên từ CSPRNG SHAKE-128 trong $[2, n-2]$), đảm bảo xác suất sai $\le (1/4)^{41} \approx 2 \times 10^{-25}$.
+    \item \textbf{Tự cài đặt hoàn toàn từ đầu (From Scratch):} Tuân thủ tuyệt đối quy định không dùng thư viện ngoài (như GMP/NTL), độc lập 100\% trên chuẩn C++14.
+    \item \textbf{An toàn bộ nhớ và triệt tiêu tràn số:} Các giải thuật \texttt{mod}, \texttt{AddMod}, \texttt{MultMod} đảm bảo mọi biến trung gian đều $< p < 2^{512}$, loại bỏ hoàn toàn nguy cơ tràn số số học.
+    \item \textbf{Tương thích đa nền tảng:} Tự động phát hiện và hỗ trợ Linux (dùng \texttt{getrandom}) và Windows (dùng \texttt{CryptGenRandom}); nếu API hệ điều hành thất bại, chương trình dừng thay vì dùng PRNG không an toàn.
+    \item \textbf{Tối ưu lọc ứng viên:} Đã bổ sung bộ lọc \texttt{is\_divisible\_by\_3\_5\_7()} trước Miller--Rabin để loại nhanh ứng viên chia hết cho $3$, $5$ hoặc $7$ mà không phải thực hiện phép chia số lớn.
+    \item \textbf{Tính chính xác của thuật toán:} Kiểm tra số nguyên tố theo chiến lược hai tầng: tầng 1 lọc nhanh bằng bộ lọc $3/5/7$ và các số nguyên tố nhỏ từ $11$ đến $53$, tầng 2 dùng Miller--Rabin với 40 cơ sở hỗn hợp. Đây là kiểm tra xác suất; cận lỗi chỉ có ý nghĩa khi các cơ sở ngẫu nhiên được lấy đủ ngẫu nhiên, không phải chứng minh nguyên tố tuyệt đối.
 \end{enumerate}
 
 \subsection{Hạn chế}
 \begin{enumerate}
-    \item **Độ phức tạp của phép nhân mô-đun Double-and-Add:** Thuật toán Double-and-Add có độ phức tạp $O(n^2)$ phép toán bit. Mỗi phép lũy thừa 512-bit cần hàng trăm phép nhân $O(n^2)$, dẫn đến tổng độ phức tạp là $O(n^3)$. Do đó, việc sinh Safe Prime 512-bit (vốn đòi hỏi tìm được số $q$ nguyên tố sao cho $2q+1$ cũng nguyên tố) có thể mất vài giây đến vài chục giây tùy thuộc vào hạt giống ngẫu nhiên ban đầu.
-    \item **Xử lý đơn luồng (Single-thread):** Vòng lặp tìm kiếm số nguyên tố an toàn hiện chạy tuần tự trên một lõi CPU duy nhất.
+    \item \textbf{Độ phức tạp của phép nhân mô-đun Double-and-Add:} Thuật toán này có chi phí cao vì mỗi phép nhân mô-đun gồm nhiều phép cộng mô-đun. Mỗi phép lũy thừa 512-bit cần nhiều phép nhân như vậy, nên việc sinh Safe Prime 512-bit có thể mất đáng kể thời gian tùy thuộc vào hạt giống và phần cứng.
+    \item \textbf{Xử lý đơn luồng (Single-thread):} Vòng lặp tìm kiếm số nguyên tố an toàn hiện chạy tuần tự trên một lõi CPU duy nhất.
 \end{enumerate}
 
 \subsection{Hướng cải tiến trong tương lai}
 \begin{enumerate}
-    \item **Thuật toán nhân Montgomery (Montgomery Multiplication):** Chuyển đổi các số về miền thặng dư Montgomery (Montgomery space) để thay thế phép chia lấy dư tốn kém bằng các phép dịch bit và trừ đơn giản, giúp tăng tốc độ phép nhân mô-đun lên từ 3 đến 5 lần.
-    \item **Thuật toán nhân nhanh Karatsuba:** Áp dụng thuật toán chia để trị Karatsuba với độ phức tạp $O(n^{\log_2 3}) \approx O(n^{1.58})$ cho các phép nhân số lớn.
-    \item **Song song hóa đa luồng (Multi-threading):** Tận dụng \texttt{std::thread} hoặc OpenMP để phân chia việc kiểm tra các ứng viên số nguyên tố $q$ trên nhiều lõi CPU đồng thời, giảm thời gian sinh Safe Prime xuống chỉ còn dưới 1 giây.
+    \item \textbf{Thuật toán nhân Montgomery (Montgomery Multiplication):} Chuyển đổi các số về miền thặng dư Montgomery (Montgomery space) để thay thế phép chia lấy dư tốn kém bằng các phép dịch bit và trừ đơn giản, giúp tăng tốc độ phép nhân mô-đun lên từ 3 đến 5 lần.
+    \item \textbf{Thuật toán nhân nhanh Karatsuba:} Áp dụng thuật toán chia để trị Karatsuba với độ phức tạp $O(n^{\log_2 3}) \approx O(n^{1.58})$ cho các phép nhân số lớn.
+    \item \textbf{Song song hóa đa luồng (Multi-threading):} Tận dụng \texttt{std::thread} hoặc OpenMP để phân chia việc kiểm tra các ứng viên số nguyên tố $q$ trên nhiều lõi CPU đồng thời, giảm thời gian sinh Safe Prime xuống chỉ còn dưới 1 giây.
 \end{enumerate}
 
 % ==================== TÀI LIỆU THAM KHẢO ====================

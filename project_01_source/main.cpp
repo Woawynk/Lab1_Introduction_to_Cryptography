@@ -32,9 +32,11 @@ int main() {
     std::cout << "    -> Sinh thanh cong so nguyen to an toan p trong " << elapsed.count() << " giay!\n";
     std::cout << "    p (Hex) = " << p.to_hex_string() << "\n\n";
 
-    // Chọn phần tử sinh g
+    // 2. Sử dụng phần tử sinh cố định g = 2 theo yêu cầu đề bài.
+    // generate_safe_prime chỉ trả về p mà tại đó 2 là primitive root.
     uint512_t g(2);
-    std::cout << "[2] Phan tu sinh cong khai g = " << g.to_hex_string() << "\n\n";
+    std::cout << "[2] Phan tu sinh cong khai g = " << g.to_hex_string() << "\n";
+    std::cout << "    g = 2 da duoc kiem tra la primitive root cua Z_p*\n\n";
 
     // 2. Sinh khóa riêng ngẫu nhiên cho Alice và Bob trong khoảng [2, p - 2]
     std::cout << "[3] Dang sinh khoa rieng cho Alice va Bob...\n";

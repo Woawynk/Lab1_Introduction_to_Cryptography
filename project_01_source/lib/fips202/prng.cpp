@@ -1,18 +1,24 @@
 #include "prng.h"
 
 // Ho tro cross-platform cho ca Windows va Linux/macOS
-void randombytes(uint8_t *out, uint8_t outlen)
+void randombytes(uint8_t *out, size_t outlen)
 {
 #if defined(_WIN32) || defined(_WIN64)
     HCRYPTPROV hProvider = 0;
-    if (CryptAcquireContext(&hProvider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT)) {
-        CryptGenRandom(hProvider, outlen, out);
-        CryptReleaseContext(hProvider, 0);
-    } else {
-        for (size_t i = 0; i < outlen; i++) {
-            out[i] = (uint8_t)(rand() & 0xFF);
-        }
+    if (!CryptAcquireContext(&hProvider, NULL, NULL, PROV_RSA_FULL,
+                             CRYPT_VERIFYCONTEXT | CRYPT_SILENT)) {
+        abort();
     }
+    while (outlen > 0) {
+        DWORD chunk = outlen > MAXDWORD ? MAXDWORD : static_cast<DWORD>(outlen);
+        if (!CryptGenRandom(hProvider, chunk, out)) {
+            CryptReleaseContext(hProvider, 0);
+            abort();
+        }
+        out += chunk;
+        outlen -= chunk;
+    }
+    CryptReleaseContext(hProvider, 0);
 #else
     ssize_t ret;
     while (outlen > 0)
@@ -20,7 +26,7 @@ void randombytes(uint8_t *out, uint8_t outlen)
         ret = getrandom(out, outlen, 0);
         if ((ret == -1) && (errno == EINTR))
             continue;
-        else if (ret < 0)
+        else if (ret <= 0)
             abort();
         out += ret;
         outlen -= ret;

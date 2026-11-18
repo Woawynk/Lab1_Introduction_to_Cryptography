@@ -19,7 +19,7 @@ Chương trình tuân thủ tiêu chuẩn **C++14**, không sử dụng bất k�
 │   ├── modular_math.h / .cpp        # mod, AddMod, MultMod, modular_exponentiation
 │   ├── dh.h / dh.cpp                # Miller-Rabin, sinh Safe Prime, sinh khóa riêng
 │   ├── main.cpp                     # Chương trình chính trao đổi khóa Diffie-Hellman
-│   ├── test_member1.cpp            # Bộ kiểm thử đơn vị cho tầng số lớn
+│   ├── test_suite.cpp              # Bộ kiểm thử số học, primality, g = 2 và DH
 │   ├── Makefile                     # File tự động hóa biên dịch
 │   └── lib/fips202/                # Bộ sinh giả ngẫu nhiên chuẩn mật mã SHAKE-128
 └── project_01_report/       # Báo cáo đồ án
