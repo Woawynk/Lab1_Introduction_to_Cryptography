@@ -353,37 +353,49 @@ $x^2 \equiv 1 \pmod p \iff x^2 - 1 \equiv 0 \pmod p \iff (x - 1)(x + 1) \equiv 0
 
 Nếu trong quá trình tính toán lũy thừa, ta tìm thấy một giá trị $x \not\equiv \pm 1 \pmod n$ mà $x^2 \equiv 1 \pmod n$, thì $n$ **chắc chắn là hợp số** (không có ngoại lệ).
 
-\subsubsection{Quy trình thuật toán trong chương trình}
-Cho số lẻ $n > 2$ cần kiểm tra:
+\subsubsection{Quy trình thuật toán trong chương trình — Chiến lược hai tầng}
+Chương trình áp dụng chiến lược kiểm tra hai tầng (Two-Phase Primality Testing) nhằm tối ưu tốc độ sinh khóa, đặc biệt với số 512-bit.
+
+\paragraph{Tầng 1 — Lọc nhanh bằng thử chia (Trial Division).}
+Trước khi chạy Miller-Rabin tốn kém, chương trình thử chia $n$ cho 15 số nguyên tố đầu tiên:
+\begin{equation}
+\mathcal{S} = \{3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53\}
+\end{equation}
+Nếu $n \equiv 0 \pmod{p_i}$ với bất kỳ $p_i \in \mathcal{S}$, kết luận ngay $n$ là hợp số và bỏ qua. Tầng lọc này loại bỏ được khoảng $75\%$ hợp số lẻ ngẫu nhiên chỉ với 15 phép toán chia đơn giản.
+
+\textbf{Lý do chỉ dùng 15 số nguyên tố nhỏ:} Với số 512-bit, hàm \texttt{mod()} tự cài đặt theo giải thuật chia nhị phân (long division bit-by-bit) phải duyệt qua 512 bước dịch bit cho mỗi lần gọi. Nếu thử chia 100 số nguyên tố nhỏ, chi phí lên đến $100 \times 512 = 51.200$ thao tác số lớn, trong khi các số nguyên tố thứ 16 trở đi chỉ bổ sung thêm xác suất lọc rất nhỏ ($< 3\%$). Điểm cân bằng tối ưu là 10--20 số đầu.
+
+\paragraph{Tầng 2 — Miller-Rabin với cơ sở hỗn hợp.}
+Cho số lẻ $n > 2$ đã vượt qua tầng 1:
 \begin{enumerate}
-    \item Phân tích $n - 1 = 2^s \cdot d$, trong đó $d$ là số lẻ và $s \ge 1$ (thực hiện bằng cách đếm số lần dịch phải liên tiếp khi $d$ chẵn).
-    \item Lựa chọn tập các cơ sở số nguyên tố cố định:
+    \item Phân tích $n - 1 = 2^s \cdot d$, trong đó $d$ là số lẻ và $s \ge 1$ (đếm số lần dịch phải liên tiếp khi $d$ chẵn).
+    \item Xây dựng tập cơ sở hỗn hợp gồm 41 phần tử:
     \begin{equation}
-    \mathcal{B} = \{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37\}
+    \mathcal{B} = \{2\} \cup \{a_1, a_2, \ldots, a_{40}\}, \quad a_i \xleftarrow{R} [2,\, n-2]
     \end{equation}
+    trong đó cơ sở cố định $a = 2$ luôn được kiểm tra đầu tiên (loại $>99.9\%$ hợp số ngay vòng đầu không tốn chi phí PRNG), và 40 cơ sở còn lại được sinh ngẫu nhiên từ CSPRNG SHAKE-128 trong khoảng $[2, n-2]$.
     \item Với mỗi cơ sở $a \in \mathcal{B}$:
     \begin{itemize}
-        \item Tính $x = a^d \pmod n$ bằng \texttt{modular\_exponentiation}.
-        \item Nếu $x \equiv 1$ hoặc $x \equiv n - 1$, số $n$ vượt qua vòng kiểm tra với cơ sở $a$.
-        \item Ngược lại, thực hiện vòng lặp bình phương $s - 1$ lần: $x = x^2 \pmod n$.
+        \item Tính $x = a^d \pmod n$ bằng \texttt{modular\_exponentiation} (Square-and-Multiply).
+        \item Nếu $x \equiv 1$ hoặc $x \equiv n - 1 \pmod n$, số $n$ vượt qua vòng kiểm tra với cơ sở $a$.
+        \item Ngược lại, thực hiện vòng lặp bình phương $s - 1$ lần: $x \leftarrow x^2 \pmod n$.
         \begin{itemize}
             \item Nếu tại một bước nào đó $x \equiv n - 1$, $n$ vượt qua vòng thử.
-            \item Nếu $x \equiv 1$ mà bước trước đó $x \neq n - 1$, $n$ là hợp số.
+            \item Nếu duyệt hết $s - 1$ lần bình phương mà không gặp $n - 1$, $n$ chắc chắn là hợp số.
         \end{itemize}
-        \item Nếu duyệt hết $s - 1$ lần bình phương mà không gặp $n - 1$, $n$ chắc chắn là hợp số.
     \end{itemize}
-    \item Nếu $n$ vượt qua tất cả các cơ sở trong $\mathcal{B}$, kết luận $n$ là số nguyên tố.
+    \item Nếu $n$ vượt qua toàn bộ 41 cơ sở trong $\mathcal{B}$, kết luận $n$ là số nguyên tố.
 \end{enumerate}
 
-\subsubsection{Cơ chế phát hiện hợp số cực nhanh của Miller-Rabin}
-Miller-Rabin là một **bộ lọc hợp số cực kỳ nhạy bén**:
+\subsubsection{Phân tích độ an toàn và hiệu năng}
 \begin{itemize}
-    \item Ngay tại cơ sở đầu tiên ($a = 2$), thuật toán đã phát hiện và loại bỏ được hơn $75\%$ các hợp số ngẫu nhiên chỉ sau đúng 1 phép lũy thừa mô-đun.
-    \item Với việc kiểm tra qua 12 cơ sở nguyên tố cố định đầu tiên, xác suất một hợp số có thể vượt qua toàn bộ các cơ sở (gọi là nhân chứng dối - False Witness) không vượt quá:
+    \item \textbf{Xác suất lỗi:} Mỗi cơ sở độc lập loại bỏ ít nhất $3/4$ số hợp số còn sót. Với 41 cơ sở hỗn hợp:
     \begin{equation}
-    P(\text{Lỗi}) \le \left(\frac{1}{4}\right)^{12} = 2^{-24} \approx 5.96 \times 10^{-8}
+    P(\text{Lỗi}) \le \left(\frac{1}{4}\right)^{41} \approx 2.09 \times 10^{-25}
     \end{equation}
-    Đây là ngưỡng an toàn vượt trội, đảm bảo loại bỏ hoàn toàn nguy cơ sinh phải hợp số giả nguyên tố.
+    Xác suất này nhỏ hơn nhiều lần so với xác suất lỗi phần cứng ngẫu nhiên, đảm bảo an toàn tuyệt đối cho ứng dụng thực tế.
+    \item \textbf{Ưu điểm của cơ sở ngẫu nhiên từ CSPRNG:} Các cơ sở cố định có nguy cơ bị khai thác nếu số được thiết kế đặc biệt để vượt qua một tập cơ sở xác định. Dùng cơ sở ngẫu nhiên từ SHAKE-128 loại trừ hoàn toàn khả năng này, nâng cao độ bảo mật so với chỉ dùng cơ sở cố định.
+    \item \textbf{Tốc độ:} Hầu hết hợp số bị loại ngay tầng 1 (15 phép chia rẻ tiền) hoặc tại vòng đầu của tầng 2 với $a = 2$. Toàn bộ 41 cơ sở chỉ được chạy đủ khi $n$ có độ chắc chắn cao là số nguyên tố.
 \end{itemize}
 
 \newpage
@@ -591,7 +603,7 @@ Chương trình chính \texttt{main} thực hiện sinh thành công Safe Prime 
     \item **Tự cài đặt hoàn toàn từ đầu (From Scratch):** Tuân thủ tuyệt đối quy định không dùng thư viện ngoài (như GMP/NTL), độc lập 100\% trên chuẩn C++14.
     \item **An toàn bộ nhớ và triệt tiêu tràn số:** Các giải thuật \texttt{mod}, \texttt{AddMod}, \texttt{MultMod} đảm bảo mọi biến trung gian đều $< p < 2^{512}$, loại bỏ hoàn toàn nguy cơ tràn số số học.
     \item **Tương thích đa nền tảng:** Tự động phát hiện và hỗ trợ cả Linux (dùng \texttt{getrandom}) và Windows (dùng \texttt{CryptGenRandom}).
-    \item **Tính chính xác của thuật toán:** Kiểm tra số nguyên tố bằng Miller-Rabin với 12 cơ sở nguyên tố cố định, loại bỏ triệt để các hợp số giả nguyên tố.
+    \item **Tính chính xác của thuật toán:** Kiểm tra số nguyên tố theo chiến lược hai tầng: tầng 1 lọc nhanh bằng 15 số nguyên tố nhỏ ($\le 53$), tầng 2 dùng Miller-Rabin với 41 cơ sở hỗn hợp (cơ sở cố định $a=2$ và 40 cơ sở ngẫu nhiên từ CSPRNG SHAKE-128 trong $[2, n-2]$), đảm bảo xác suất sai $\le (1/4)^{41} \approx 2 \times 10^{-25}$.
 \end{enumerate}
 
 \subsection{Hạn chế}
